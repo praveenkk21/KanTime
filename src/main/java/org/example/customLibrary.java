@@ -1,11 +1,17 @@
 package org.example;
 
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.support.ui.Select;
 
+import java.io.FileReader;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
 import java.time.Duration;
 
 public class customLibrary
@@ -52,4 +58,52 @@ public class customLibrary
         }
         return false;
     }
+
+    public static String jsonParse(String stringValue) {
+        String value = null;
+        try {
+            JsonObject obj = (JsonObject) new JsonParser().parse(new FileReader("resources/config.json"));
+            JsonObject jsonObj = (JsonObject) obj;
+            value = String.valueOf(jsonObj.get(stringValue));
+            //System.out.println("Name: " + value);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return value;
+    }
+    public String jsonParseForSQL(String value, String columnName) {
+        String valueFromMethod = null;
+        try {
+            JsonObject obj = (JsonObject) new JsonParser().parse(value);
+            // Parse JSON using Gson));
+            JsonObject jsonObj = (JsonObject) obj;
+            valueFromMethod = String.valueOf(jsonObj.get(columnName));
+            System.out.println(columnName+": " + valueFromMethod);
+            return valueFromMethod;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return valueFromMethod;
+    }
+        public Connection dbConnect() {
+            try {
+                Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
+            } catch (ClassNotFoundException e) {
+                e.printStackTrace();
+            }
+            String url = "jdbc:sqlserver://192.168.1.122:1433;databaseName=ZephyrUIPath;encrypt=false;";
+            String username = "medicaresqluser";
+            String password = "kantime_123";
+
+            Connection connection = null;
+            try {
+                connection = DriverManager.getConnection(url, username, password);
+                // Use connection...
+                return connection;
+                //connection.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+            return connection;
+        }
 }

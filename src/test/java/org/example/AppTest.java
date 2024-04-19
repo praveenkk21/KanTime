@@ -1,8 +1,17 @@
 package org.example;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import org.openqa.selenium.WebDriver;
 import org.testng.annotations.AfterTest;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Test;
+
+import java.io.FileReader;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.time.Clock;
 import java.time.Duration;
 
 /**
@@ -13,8 +22,8 @@ import java.time.Duration;
 public class AppTest
 {
     WebDriver driver;
-
-    @BeforeTest
+    String instance_code,zephyr_environments_connection_string;
+    //@BeforeTest
     public void browserOpen() {
         driver = customLibrary.driver("https://working.kantimehealth.net/identity/v2/Accounts/Authorize?product=hh");
     }
@@ -64,5 +73,24 @@ public class AppTest
             customLibrary.elementInteractionId(driver, "btn_admitasnew");
         }
     }
+    @Test
+    public void configFetch() throws SQLException {
+        instance_code=customLibrary.jsonParse("instance_code");
+        zephyr_environments_connection_string=customLibrary.jsonParse("zephyr_environments_connection_string");
+        Connection connected = new customLibrary().dbConnect();
+        System.out.println(connected);
+        String query = "select * from ZephyrUIPath..ProcessMaster";
+        Statement statement = connected.createStatement();
+        ResultSet resultSet = statement.executeQuery(query);
+        if (resultSet.next()) {
+            String columnName = resultSet.getMetaData().getColumnName(12);
+            Object columnValue = resultSet.getObject(12);
+            String value_1=new customLibrary().jsonParseForSQL(String.valueOf(columnValue),"login_id");
+            System.out.println(value_1);
+        }
+    }
+
+
 }
+
 
