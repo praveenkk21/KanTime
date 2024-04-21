@@ -33,7 +33,7 @@ public class AppTest
     }
     @Test(priority=0)
     public void enterLogin() throws SQLException {
-        customLibrary.elementInteractionId(driver,"txt_username",""+customLibrary.configFetch("login_id")+"");
+        customLibrary.elementInteractionId(driver,"txt_username", customLibrary.configFetch("login_id"));
     }
 
     @Test(priority=1)
