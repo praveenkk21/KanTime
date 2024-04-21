@@ -1,6 +1,7 @@
 package org.example;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import org.openqa.selenium.NoAlertPresentException;
 import org.openqa.selenium.WebDriver;
 import org.testng.annotations.AfterTest;
 import org.testng.annotations.BeforeTest;
@@ -14,17 +15,15 @@ import java.sql.Statement;
 import java.time.Clock;
 import java.time.Duration;
 
-/**
- * Unit test for simple App.
- */
-
 @Test
 public class AppTest
 {
     WebDriver driver;
     String instance_code,zephyr_environments_connection_string;
-    //@BeforeTest
+    @BeforeTest
     public void browserOpen() {
+        instance_code=customLibrary.jsonParse("instance_code");
+        zephyr_environments_connection_string=customLibrary.jsonParse("zephyr_environments_connection_string");
         driver = customLibrary.driver("https://working.kantimehealth.net/identity/v2/Accounts/Authorize?product=hh");
     }
 
@@ -33,15 +32,13 @@ public class AppTest
         //driver.close();
     }
     @Test(priority=0)
-    public void enterLogin()
-    {
-        customLibrary.elementInteractionId(driver,"txt_username","white@CKT.com");
+    public void enterLogin() throws SQLException {
+        customLibrary.elementInteractionId(driver,"txt_username",""+customLibrary.configFetch("login_id")+"");
     }
 
     @Test(priority=1)
-    public void enterPassword()
-    {
-        customLibrary.elementInteractionId(driver,"txt_password","Test@1234");
+    public void enterPassword() throws SQLException {
+        customLibrary.elementInteractionId(driver,"txt_password",customLibrary.configFetch("password"));
     }
 
     @Test(priority=2)
@@ -58,13 +55,13 @@ public class AppTest
     }
 
     @Test(priority=4)
-    public void enterIntakeDetails() {
-        customLibrary.dropdownSelector(driver, "MainContent_drp_Branch", "Test_Branch_Kafka_1");
-        customLibrary.dropdownSelector(driver, "MainContent_ddl_LOB", "Kafka_LOB_One");
-        customLibrary.elementInteractionId(driver, "MainContent_txtFirstname", "praveen");
-        customLibrary.elementInteractionId(driver, "MainContent_txtLastname", "kumar");
-        customLibrary.elementInteractionId(driver, "MainContent_txtDOB", "01/01/1950");
-        customLibrary.dropdownSelector(driver, "MainContent_ddlPayer", "Billing_Test_CDA");
+    public void enterIntakeDetails() throws SQLException, InterruptedException {
+        customLibrary.dropdownSelector(driver, "MainContent_drp_Branch", customLibrary.configFetch("location"));
+        customLibrary.dropdownSelector(driver, "MainContent_ddl_LOB", customLibrary.configFetch("lob"));
+        customLibrary.elementInteractionId(driver, "MainContent_txtFirstname", customLibrary.configFetch("first_name"));
+        customLibrary.elementInteractionId(driver, "MainContent_txtLastname", customLibrary.configFetch("last_name"));
+        customLibrary.elementInteractionId(driver, "MainContent_txtDOB", customLibrary.configFetch("dob"));
+        customLibrary.dropdownSelector(driver, "MainContent_ddlPayer", customLibrary.configFetch("payer"));
         customLibrary.elementInteractionId(driver, "MainContent_chkLongTermCare");
         if (customLibrary.elementIsClickable(driver, "btn_admitasnew")) {
             customLibrary.elementInteractionId(driver, "btn_admitasnew");
@@ -72,25 +69,20 @@ public class AppTest
             customLibrary.elementInteractionId(driver, "MainContent_btn_checkduplicate");
             customLibrary.elementInteractionId(driver, "btn_admitasnew");
         }
-    }
-    @Test
-    public void configFetch() throws SQLException {
-        instance_code=customLibrary.jsonParse("instance_code");
-        zephyr_environments_connection_string=customLibrary.jsonParse("zephyr_environments_connection_string");
-        Connection connected = new customLibrary().dbConnect();
-        System.out.println(connected);
-        String query = "select * from ZephyrUIPath..ProcessMaster";
-        Statement statement = connected.createStatement();
-        ResultSet resultSet = statement.executeQuery(query);
-        if (resultSet.next()) {
-            String columnName = resultSet.getMetaData().getColumnName(12);
-            Object columnValue = resultSet.getObject(12);
-            String value_1=new customLibrary().jsonParseForSQL(String.valueOf(columnValue),"login_id");
-            System.out.println(value_1);
+
+        Thread.sleep(5000);
+        try {
+            driver.switchTo().alert().accept();
+        } catch (NoAlertPresentException ex) {
+            System.out.println("No alert present");
         }
+        Thread.sleep(5000);
+        if (driver.getCurrentUrl().contains("IntakeId")) {
+            System.out.println("IntakeId is created");
+        }
+        else  System.out.println("IntakeId is not created");
+
     }
-
-
 }
 
 

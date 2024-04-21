@@ -9,9 +9,7 @@ import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.support.ui.Select;
 
 import java.io.FileReader;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
+import java.sql.*;
 import java.time.Duration;
 
 public class customLibrary
@@ -20,7 +18,7 @@ public class customLibrary
     {
         WebDriver driver = new ChromeDriver();
         driver.manage().window().maximize();
-        driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(10));
+        //driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(10));
         driver.get(url);
         return driver;
     }
@@ -106,4 +104,27 @@ public class customLibrary
             }
             return connection;
         }
+
+    public static String configFetch(String columnNameofTable) throws SQLException {
+        Connection connected = new customLibrary().dbConnect();
+        System.out.println(connected);
+        String query = "select * from ProcessMaster";
+        Statement statement = connected.createStatement();
+        ResultSet resultSet = statement.executeQuery(query);
+        String login_id = null;
+        if (resultSet.next()) {
+            String columnName = resultSet.getMetaData().getColumnName(12);
+            Object columnValue = resultSet.getObject(12);
+            login_id = new customLibrary().jsonParseForSQL(String.valueOf(columnValue), columnNameofTable);
+            connected.close();
+            return (replaceDoubleQuotes(login_id));
+        }
+        return login_id;
+    }
+
+    public static String replaceDoubleQuotes(String value)
+    {
+        return  value.replace("\"", "");
+    }
+
 }
