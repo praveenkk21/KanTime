@@ -15,15 +15,18 @@ import java.sql.Statement;
 import java.time.Clock;
 import java.time.Duration;
 
+import static org.example.customLibrary.jsonParse;
+
 @Test
 public class AppTest
 {
     WebDriver driver;
     String instance_code,zephyr_environments_connection_string;
+
     @BeforeTest
     public void browserOpen() {
-        instance_code=customLibrary.jsonParse("instance_code");
-        zephyr_environments_connection_string=customLibrary.jsonParse("zephyr_environments_connection_string");
+        instance_code= jsonParse("instance_code");
+        zephyr_environments_connection_string= jsonParse("zephyr_environments_connection_string");
         driver = customLibrary.driver("https://working.kantimehealth.net/identity/v2/Accounts/Authorize?product=hh");
     }
 
@@ -83,6 +86,16 @@ public class AppTest
         else  System.out.println("IntakeId is not created");
 
     }
+
+//    @Test
+//    public void z()
+//    {
+//        String mssql=jsonParse("zephyr_environments_connection_string");
+//        // "Data Source=192.168.1.122;Initial Catalog=ZephyrUIPath;Persist Security Info=True;User ID=medicaresqluser;Password=kantime_123"
+//        String m1=mssql.replace("Data Source=","jdbc:sqlserver://");
+//        String m2=m1.replace("Initial Catalog","databaseName");
+//        System.out.println(m2);
+//    }
 }
 
 

@@ -6,6 +6,8 @@ import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.chrome.ChromeOptions;
+import org.openqa.selenium.remote.tracing.opentelemetry.SeleniumSpanExporter;
 import org.openqa.selenium.support.ui.Select;
 
 import java.io.FileReader;
@@ -16,7 +18,9 @@ public class customLibrary
 {
     public static WebDriver driver(String url)
     {
-        WebDriver driver = new ChromeDriver();
+        ChromeOptions options = new ChromeOptions();
+        options.addArguments("--headless");
+        WebDriver driver = new ChromeDriver(options);
         driver.manage().window().maximize();
         //driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(10));
         driver.get(url);
@@ -89,10 +93,14 @@ public class customLibrary
             } catch (ClassNotFoundException e) {
                 e.printStackTrace();
             }
-            String url = "jdbc:sqlserver://192.168.1.122:1433;databaseName=ZephyrUIPath;encrypt=false;";
-            String username = "medicaresqluser";
-            String password = "kantime_123";
 
+            String mssql=replaceDoubleQuotes(jsonParse("zephyr_environments_connection_string"));
+            String url = convertToJdbcConnectionString(mssql);
+            System.out.println(url);
+            String username = convertToJdbcConnectionCred(mssql,"userid");
+            String password = convertToJdbcConnectionCred(mssql,"password");
+            System.out.println(username);
+            System.out.println(password);
             Connection connection = null;
             try {
                 connection = DriverManager.getConnection(url, username, password);
@@ -127,4 +135,68 @@ public class customLibrary
         return  value.replace("\"", "");
     }
 
+    public static String convertToJdbcConnectionCred(String inputConnectionString, String cred) {
+        String[] parts = inputConnectionString.split(";");
+        String userid = "";
+        String password = "";
+
+        for (String part : parts) {
+            String[] keyValue = part.split("=");
+            if (keyValue.length == 2) {
+                String key = keyValue[0].trim();
+                String value = keyValue[1].trim();
+
+                switch (key) {
+                    case "User ID":
+                        userid = value;
+                        break;
+                    case "Password":
+                        password = value;
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+        if(cred.equals("userid")) {
+            return userid;
+        }
+        else
+        {
+            return password;
+        }
+    }
+
+    public static String convertToJdbcConnectionString(String inputConnectionString) {
+        String[] parts = inputConnectionString.split(";");
+        String dataSource = "";
+        String initialCatalog = "";
+
+        for (String part : parts) {
+            String[] keyValue = part.split("=");
+            if (keyValue.length == 2) {
+                String key = keyValue[0].trim();
+                String value = keyValue[1].trim();
+
+                switch (key) {
+                    case "Data Source":
+                        dataSource = value;
+                        break;
+                    case "Initial Catalog":
+                        initialCatalog = value;
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+
+        if (!dataSource.isEmpty() && !initialCatalog.isEmpty()) {
+            return "jdbc:sqlserver://" + dataSource + ":1433;databaseName=" + initialCatalog + ";encrypt=false;";
+        } else {
+            return "Invalid input connection string";
+        }
+    }
+
 }
+
