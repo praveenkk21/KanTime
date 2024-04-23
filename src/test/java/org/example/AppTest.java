@@ -73,9 +73,9 @@ public class AppTest
         elementInteractionId(driver, "MainContent_txtFirstname", configFetch(connection,"first_name"));
         elementInteractionId(driver, "MainContent_txtLastname", configFetch(connection,"last_name"));
         elementInteractionId(driver, "MainContent_txtDOB", configFetch(connection,"dob"));
-        Thread.sleep(5000);
+        Thread.sleep(2000);
         dropdownSelector(driver, "MainContent_ddlPayer", configFetch(connection,"payer"));
-        Thread.sleep(5000);
+        Thread.sleep(2000);
         elementInteractionId(driver, "MainContent_chkLongTermCare");
         if (elementIsClickable(driver, "btn_admitasnew")) {
             elementInteractionId(driver, "btn_admitasnew");
