@@ -15,6 +15,7 @@ import java.sql.Statement;
 import java.time.Clock;
 import java.time.Duration;
 
+import static org.example.customLibrary.*;
 import static org.example.customLibrary.jsonParse;
 
 @Test
@@ -22,55 +23,65 @@ public class AppTest
 {
     WebDriver driver;
     String instance_code,zephyr_environments_connection_string;
+    Connection connection;
 
     @BeforeTest
-    public void browserOpen() {
+    public void msDbConnect()
+    {
+        connection = new customLibrary().dbConnect();
+    }
+
+    @Test(priority=0)
+    public void browserOpen() throws SQLException {
         instance_code= jsonParse("instance_code");
         zephyr_environments_connection_string= jsonParse("zephyr_environments_connection_string");
-        driver = customLibrary.driver("https://working.kantimehealth.net/identity/v2/Accounts/Authorize?product=hh");
+        driver = driver(configFetch(connection,"url"));
     }
 
     @AfterTest
-    public void browserClose() {
+    public void browserClose() throws SQLException {
         //driver.close();
+        connection.close();
     }
-    @Test(priority=0)
+    @Test(priority=1)
     public void enterLogin() throws SQLException {
-        customLibrary.elementInteractionId(driver,"txt_username", customLibrary.configFetch("login_id"));
+        elementInteractionId(driver,"txt_username", configFetch(connection,"login_id"));
     }
 
     @Test(priority=1)
     public void enterPassword() throws SQLException {
-        customLibrary.elementInteractionId(driver,"txt_password",customLibrary.configFetch("password"));
+        elementInteractionId(driver,"txt_password", configFetch(connection,"password"));
     }
 
     @Test(priority=2)
     public void clickLogin()
     {
-        customLibrary.elementInteractionId(driver,"btn_login");
+        elementInteractionId(driver,"btn_login");
     }
 
     @Test(priority=3)
     public void enterIntakeAddPage()
     {
-        customLibrary.elementInteractionXpath(driver,"//*[@class='MainMenuItemStyleInner_Training' and @id='1']");
-        customLibrary.elementInteractionXpath(driver,"//*[@id='td_0']");
+        elementInteractionXpath(driver,"//*[@class='MainMenuItemStyleInner_Training' and @id='1']");
+        elementInteractionXpath(driver,"//*[@id='td_0']");
     }
 
     @Test(priority=4)
     public void enterIntakeDetails() throws SQLException, InterruptedException {
-        customLibrary.dropdownSelector(driver, "MainContent_drp_Branch", customLibrary.configFetch("location"));
-        customLibrary.dropdownSelector(driver, "MainContent_ddl_LOB", customLibrary.configFetch("lob"));
-        customLibrary.elementInteractionId(driver, "MainContent_txtFirstname", customLibrary.configFetch("first_name"));
-        customLibrary.elementInteractionId(driver, "MainContent_txtLastname", customLibrary.configFetch("last_name"));
-        customLibrary.elementInteractionId(driver, "MainContent_txtDOB", customLibrary.configFetch("dob"));
-        customLibrary.dropdownSelector(driver, "MainContent_ddlPayer", customLibrary.configFetch("payer"));
-        customLibrary.elementInteractionId(driver, "MainContent_chkLongTermCare");
-        if (customLibrary.elementIsClickable(driver, "btn_admitasnew")) {
-            customLibrary.elementInteractionId(driver, "btn_admitasnew");
+        dropdownSelector(driver, "MainContent_drp_Branch", configFetch(connection,"location"));
+        dropdownSelector(driver, "MainContent_ddl_LOB", configFetch(connection,"lob"));
+        elementInteractionId(driver, "MainContent_txtFirstname", configFetch(connection,"first_name"));
+        elementInteractionId(driver, "MainContent_txtLastname", configFetch(connection,"last_name"));
+        elementInteractionId(driver, "MainContent_txtDOB", configFetch(connection,"dob"));
+        Thread.sleep(5000);
+        dropdownSelector(driver, "MainContent_ddlPayer", configFetch(connection,"payer"));
+        Thread.sleep(5000);
+        elementInteractionId(driver, "MainContent_chkLongTermCare");
+        if (elementIsClickable(driver, "btn_admitasnew")) {
+            elementInteractionId(driver, "btn_admitasnew");
         } else {
-            customLibrary.elementInteractionId(driver, "MainContent_btn_checkduplicate");
-            customLibrary.elementInteractionId(driver, "btn_admitasnew");
+            elementInteractionId(driver, "MainContent_btn_checkduplicate");
+            elementInteractionId(driver, "btn_admitasnew");
         }
 
         Thread.sleep(5000);

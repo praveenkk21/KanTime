@@ -1,5 +1,4 @@
 package org.example;
-
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import org.openqa.selenium.By;
@@ -19,15 +18,14 @@ public class customLibrary
     public static WebDriver driver(String url)
     {
         ChromeOptions options = new ChromeOptions();
-        options.addArguments("--headless");
+        //options.addArguments("--headless");
         WebDriver driver = new ChromeDriver(options);
         driver.manage().window().maximize();
-        //driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(10));
+        driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(10));
         driver.get(url);
         return driver;
     }
-    public static void dropdownSelector(WebDriver driver, String idName, String visibleText )
-    {
+    public static void dropdownSelector(WebDriver driver, String idName, String visibleText ) throws InterruptedException {
         Select dropdown = new Select(driver.findElement(By.id(idName)));
         dropdown.selectByVisibleText(visibleText);
     }
@@ -87,44 +85,43 @@ public class customLibrary
         }
         return valueFromMethod;
     }
-        public Connection dbConnect() {
-            try {
-                Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
-            } catch (ClassNotFoundException e) {
-                e.printStackTrace();
-            }
-
-            String mssql=replaceDoubleQuotes(jsonParse("zephyr_environments_connection_string"));
-            String url = convertToJdbcConnectionString(mssql);
-            System.out.println(url);
-            String username = convertToJdbcConnectionCred(mssql,"userid");
-            String password = convertToJdbcConnectionCred(mssql,"password");
-            System.out.println(username);
-            System.out.println(password);
-            Connection connection = null;
-            try {
-                connection = DriverManager.getConnection(url, username, password);
-                // Use connection...
-                return connection;
-                //connection.close();
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
-            return connection;
+    public Connection dbConnect() {
+        try {
+            Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
         }
 
-    public static String configFetch(String columnNameofTable) throws SQLException {
-        Connection connected = new customLibrary().dbConnect();
-        System.out.println(connected);
+        String mssql=replaceDoubleQuotes(jsonParse("zephyr_environments_connection_string"));
+        String url = convertToJdbcConnectionString(mssql);
+        System.out.println(url);
+        String username = convertToJdbcConnectionCred(mssql,"userid");
+        String password = convertToJdbcConnectionCred(mssql,"password");
+        System.out.println(username);
+        System.out.println(password);
+        Connection connection = null;
+        try {
+            connection = DriverManager.getConnection(url, username, password);
+            // Use connection...
+            return connection;
+            //connection.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return connection;
+    }
+
+    public static String configFetch(Connection connection,String columnNameofTable) throws SQLException {
+        System.out.println(connection);
         String query = "select * from ProcessMaster";
-        Statement statement = connected.createStatement();
+        Statement statement = connection.createStatement();
         ResultSet resultSet = statement.executeQuery(query);
         String login_id = null;
         if (resultSet.next()) {
             String columnName = resultSet.getMetaData().getColumnName(12);
             Object columnValue = resultSet.getObject(12);
             login_id = new customLibrary().jsonParseForSQL(String.valueOf(columnValue), columnNameofTable);
-            connected.close();
+            //connection.close();
             return (replaceDoubleQuotes(login_id));
         }
         return login_id;
