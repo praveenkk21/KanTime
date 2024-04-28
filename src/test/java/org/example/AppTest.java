@@ -1,19 +1,13 @@
 package org.example;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import org.openqa.selenium.NoAlertPresentException;
 import org.openqa.selenium.WebDriver;
 import org.testng.annotations.AfterTest;
 import org.testng.annotations.BeforeTest;
+import org.testng.annotations.Parameters;
 import org.testng.annotations.Test;
 
-import java.io.FileReader;
 import java.sql.Connection;
-import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
-import java.time.Clock;
-import java.time.Duration;
 
 import static org.example.customLibrary.*;
 import static org.example.customLibrary.jsonParse;
@@ -31,12 +25,18 @@ public class AppTest
         connection = new customLibrary().dbConnect();
     }
 
-    @Test(priority=0)
-    public void browserOpen() throws SQLException {
-        instance_code= jsonParse("instance_code");
-        zephyr_environments_connection_string= jsonParse("zephyr_environments_connection_string");
-        driver = driver(configFetch(connection,"url"));
-    }
+
+
+    @Test(priority=0) //,groups = {"dont run"}
+    @Parameters ("browser")
+    public void browserOpen(String browser) throws SQLException {
+        instance_code = jsonParse("instance_code");
+        zephyr_environments_connection_string = jsonParse("zephyr_environments_connection_string");
+        if (browser.equals("chrome"))
+            driver = Chromedriver(configFetch(connection, "url"));
+        else if(browser.equals("edge"))
+            driver = Edgedriver(configFetch(connection, "url"));
+        }
 
     @AfterTest
     public void browserClose() throws SQLException {
@@ -73,9 +73,9 @@ public class AppTest
         elementInteractionId(driver, "MainContent_txtFirstname", configFetch(connection,"first_name"));
         elementInteractionId(driver, "MainContent_txtLastname", configFetch(connection,"last_name"));
         elementInteractionId(driver, "MainContent_txtDOB", configFetch(connection,"dob"));
-        Thread.sleep(2000);
+        Thread.sleep(3000);
         dropdownSelector(driver, "MainContent_ddlPayer", configFetch(connection,"payer"));
-        Thread.sleep(2000);
+        Thread.sleep(3000);
         elementInteractionId(driver, "MainContent_chkLongTermCare");
         if (elementIsClickable(driver, "btn_admitasnew")) {
             elementInteractionId(driver, "btn_admitasnew");
@@ -84,13 +84,13 @@ public class AppTest
             elementInteractionId(driver, "btn_admitasnew");
         }
 
-        Thread.sleep(5000);
+        Thread.sleep(4000);
         try {
             driver.switchTo().alert().accept();
         } catch (NoAlertPresentException ex) {
             System.out.println("No alert present");
         }
-        Thread.sleep(5000);
+        Thread.sleep(4000);
         if (driver.getCurrentUrl().contains("IntakeId")) {
             System.out.println("IntakeId is created");
         }

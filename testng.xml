@@ -1,9 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE suite SYSTEM "http://testng.org/testng-1.0.dtd">
-<suite name="All Test Suite">
-    <test name="testing">
-        <classes>
-            <class name="org.example.AppTest" />
-        </classes>
-    </test>
+<suite name="Suite 1" >
+    <suite-files>
+        <suite-file path="chromeSuite.xml"/>
+<!--        <suite-file path="edgeSuite.xml"/>-->
+    </suite-files>
 </suite>

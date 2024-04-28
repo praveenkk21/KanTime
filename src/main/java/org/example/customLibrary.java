@@ -6,6 +6,8 @@ import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
+import org.openqa.selenium.edge.EdgeDriver;
+import org.openqa.selenium.edge.EdgeOptions;
 import org.openqa.selenium.remote.tracing.opentelemetry.SeleniumSpanExporter;
 import org.openqa.selenium.support.ui.Select;
 
@@ -15,7 +17,7 @@ import java.time.Duration;
 
 public class customLibrary
 {
-    public static WebDriver driver(String url)
+    public static WebDriver Chromedriver(String url)
     {
         ChromeOptions options = new ChromeOptions();
         options.addArguments("--headless");
@@ -25,6 +27,18 @@ public class customLibrary
         driver.get(url);
         return driver;
     }
+
+    public static WebDriver Edgedriver(String url)
+    {
+        EdgeOptions optionsedge = new EdgeOptions();
+        optionsedge.addArguments("--headless");
+        WebDriver driver = new EdgeDriver(optionsedge);
+        driver.manage().window().maximize();
+        driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(10));
+        driver.get(url);
+        return driver;
+    }
+
     public static void dropdownSelector(WebDriver driver, String idName, String visibleText ) throws InterruptedException {
         Select dropdown = new Select(driver.findElement(By.id(idName)));
         dropdown.selectByVisibleText(visibleText);
