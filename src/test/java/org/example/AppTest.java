@@ -1,6 +1,7 @@
 package org.example;
 import org.openqa.selenium.NoAlertPresentException;
 import org.openqa.selenium.WebDriver;
+import org.testng.Assert;
 import org.testng.annotations.AfterTest;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Parameters;
@@ -9,6 +10,7 @@ import org.testng.annotations.Test;
 import java.sql.Connection;
 import java.sql.SQLException;
 
+import static io.netty.util.internal.SystemPropertyUtil.contains;
 import static org.example.customLibrary.*;
 import static org.example.customLibrary.jsonParse;
 
@@ -25,8 +27,6 @@ public class AppTest
         connection = new customLibrary().dbConnect();
     }
 
-
-
     @Test(priority=0) //,groups = {"dont run"}
     @Parameters ("browser")
     public void browserOpen(String browser) throws SQLException {
@@ -36,67 +36,113 @@ public class AppTest
             driver = Chromedriver(configFetch(connection, "url"));
         else if(browser.equals("edge"))
             driver = Edgedriver(configFetch(connection, "url"));
-        }
+        else
+            driver = Chromedriver(configFetch(connection, "url"));
+
+    }
 
     @AfterTest
     public void browserClose() throws SQLException {
-        //driver.close();
+        driver.close();
         connection.close();
     }
-    @Test(priority=1)
-    public void enterLogin() throws SQLException {
-        elementInteractionId(driver,"txt_username", configFetch(connection,"login_id"));
+
+    @Test(priority = 1)
+    public void credentialsEntry() throws SQLException {
+        loginPage credentialsEntryLogin = new loginPage(driver);
+        credentialsEntryLogin.enterUsernameBy(configFetch(connection,"login_id"));
+        credentialsEntryLogin.enterPasswordBy(configFetch(connection,"password"));
+        credentialsEntryLogin.loginClickBy();
     }
 
-    @Test(priority=1)
-    public void enterPassword() throws SQLException {
-        elementInteractionId(driver,"txt_password", configFetch(connection,"password"));
+    @Test(priority = 2)
+    public void intakeSetupCodeTest() {
+        intakeSetup  intakePageNav=new intakeSetup(driver);
+        intakePageNav.referralClick();
+        intakePageNav.intakeClick();
     }
 
-    @Test(priority=2)
-    public void clickLogin()
-    {
-        elementInteractionId(driver,"btn_login");
-    }
-
-    @Test(priority=3)
-    public void enterIntakeAddPage()
-    {
-        elementInteractionXpath(driver,"//*[@class='MainMenuItemStyleInner_Training' and @id='1']");
-        elementInteractionXpath(driver,"//*[@id='td_0']");
-    }
-
-    @Test(priority=4)
-    public void enterIntakeDetails() throws SQLException, InterruptedException {
-        dropdownSelector(driver, "MainContent_drp_Branch", configFetch(connection,"location"));
-        dropdownSelector(driver, "MainContent_ddl_LOB", configFetch(connection,"lob"));
-        elementInteractionId(driver, "MainContent_txtFirstname", configFetch(connection,"first_name"));
-        elementInteractionId(driver, "MainContent_txtLastname", configFetch(connection,"last_name"));
-        elementInteractionId(driver, "MainContent_txtDOB", configFetch(connection,"dob"));
-        Thread.sleep(3000);
-        dropdownSelector(driver, "MainContent_ddlPayer", configFetch(connection,"payer"));
-        Thread.sleep(3000);
-        elementInteractionId(driver, "MainContent_chkLongTermCare");
+    @Test(priority = 3)
+    public void intakeDataAddition() throws SQLException, InterruptedException {
+        intakeDataAdd intakeDataAddition = new intakeDataAdd(driver);
+        intakeDataAddition.selectLocationBy(configFetch(connection, "location"));
+        intakeDataAddition.selectLobBy(configFetch(connection, "lob"));
+        intakeDataAddition.intakeFirstName(configFetch(connection, "first_name"));
+        intakeDataAddition.IntakeLastName(configFetch(connection, "last_name"));
+        intakeDataAddition.enterDOB(configFetch(connection, "dob"));
+        intakeDataAddition.selectPayerBy(configFetch(connection, "payer"));
+        intakeDataAddition.clickTerm();
         if (elementIsClickable(driver, "btn_admitasnew")) {
-            elementInteractionId(driver, "btn_admitasnew");
+            intakeDataAddition.admitClick();
         } else {
-            elementInteractionId(driver, "MainContent_btn_checkduplicate");
-            elementInteractionId(driver, "btn_admitasnew");
+            intakeDataAddition.duplicateCheck();
+            intakeDataAddition.admitClick();
         }
-
-        Thread.sleep(4000);
         try {
             driver.switchTo().alert().accept();
         } catch (NoAlertPresentException ex) {
             System.out.println("No alert present");
         }
         Thread.sleep(4000);
-        if (driver.getCurrentUrl().contains("IntakeId")) {
-            System.out.println("IntakeId is created");
-        }
-        else  System.out.println("IntakeId is not created");
-
+        boolean currenturl = driver.getCurrentUrl().contains("IntakeId");
+        Assert.assertTrue(currenturl,"IntakeId is not created");
     }
+
+//    @Test(priority=1)
+//    public void enterLogin() throws SQLException {
+//        elementInteractionId(driver,"txt_username", configFetch(connection,"login_id"));
+//    }
+//
+//    @Test(priority=1)
+//    public void enterPassword() throws SQLException {
+//        elementInteractionId(driver,"txt_password", configFetch(connection,"password"));
+//
+//    }
+//
+//    @Test(priority=2)
+//    public void clickLogin()
+//    {
+//        elementInteractionId(driver,"btn_login");
+//    }
+//
+//    @Test(priority=3)
+//    public void enterIntakeAddPage()
+//    {
+//        elementInteractionXpath(driver,"//*[@class='MainMenuItemStyleInner_Training' and @id='1']");
+//        elementInteractionXpath(driver,"//*[@id='td_0']");
+//    }
+//
+//    @Test(priority=4)
+//    public void enterIntakeDetails() throws SQLException, InterruptedException {
+//        dropdownSelector(driver, "MainContent_drp_Branch", configFetch(connection,"location"));
+//        dropdownSelector(driver, "MainContent_ddl_LOB", configFetch(connection,"lob"));
+//        elementInteractionId(driver, "MainContent_txtFirstname", configFetch(connection,"first_name"));
+//        elementInteractionId(driver, "MainContent_txtLastname", configFetch(connection,"last_name"));
+//        elementInteractionId(driver, "MainContent_txtDOB", configFetch(connection,"dob"));
+//        Thread.sleep(3000);
+//        dropdownSelector(driver, "MainContent_ddlPayer", configFetch(connection,"payer"));
+//        Thread.sleep(3000);
+//        elementInteractionId(driver, "MainContent_chkLongTermCare");
+//        if (elementIsClickable(driver, "btn_admitasnew")) {
+//            elementInteractionId(driver, "btn_admitasnew");
+//        } else {
+//            elementInteractionId(driver, "MainContent_btn_checkduplicate");
+//            elementInteractionId(driver, "btn_admitasnew");
+//        }
+//
+//        Thread.sleep(4000);
+//        try {
+//            driver.switchTo().alert().accept();
+//        } catch (NoAlertPresentException ex) {
+//            System.out.println("No alert present");
+//        }
+//        Thread.sleep(4000);
+//        if (driver.getCurrentUrl().contains("IntakeId")) {
+//            System.out.println("IntakeId is created");
+//        }
+//        else  System.out.println("IntakeId is not created");
+
+  //  }
 
 //    @Test
 //    public void z()

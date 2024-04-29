@@ -127,7 +127,7 @@ public class customLibrary
 
     public static String configFetch(Connection connection,String columnNameofTable) throws SQLException {
         System.out.println(connection);
-        String query = "select * from ProcessMaster";
+        String query = "select * from ProcessMaster with (nolock)";
         Statement statement = connection.createStatement();
         ResultSet resultSet = statement.executeQuery(query);
         String login_id = null;
