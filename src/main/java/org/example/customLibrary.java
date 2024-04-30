@@ -8,19 +8,33 @@ import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.edge.EdgeDriver;
 import org.openqa.selenium.edge.EdgeOptions;
+import org.openqa.selenium.remote.DesiredCapabilities;
 import org.openqa.selenium.remote.tracing.opentelemetry.SeleniumSpanExporter;
 import org.openqa.selenium.support.ui.Select;
-
+import org.openqa.selenium.remote.RemoteWebDriver;
 import java.io.FileReader;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.sql.*;
 import java.time.Duration;
 
 public class customLibrary
 {
+
+    public static WebDriver remoteDriver(String url2) throws MalformedURLException {
+        DesiredCapabilities dc=new DesiredCapabilities();
+        WebDriver driver = new RemoteWebDriver(new URL("http://localhost:4444/"),dc);
+        driver.manage().window().maximize();
+        driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(10));
+        driver.get(url2);
+        return driver;
+    }
+
+
     public static WebDriver Chromedriver(String url)
     {
         ChromeOptions options = new ChromeOptions();
-        //options.addArguments("--headless");
+        options.addArguments("--headless");
         WebDriver driver = new ChromeDriver(options);
         driver.manage().window().maximize();
         driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(10));

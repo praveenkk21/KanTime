@@ -1,12 +1,14 @@
 package org.example;
 import org.openqa.selenium.NoAlertPresentException;
 import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.remote.DesiredCapabilities;
 import org.testng.Assert;
 import org.testng.annotations.AfterTest;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Parameters;
 import org.testng.annotations.Test;
 
+import java.net.MalformedURLException;
 import java.sql.Connection;
 import java.sql.SQLException;
 
@@ -29,13 +31,17 @@ public class AppTest
 
     @Test(priority=0) //,groups = {"dont run"}
     @Parameters ("browser")
-    public void browserOpen(String browser) throws SQLException {
+    public void browserOpen(String browser) throws SQLException, MalformedURLException {
         instance_code = jsonParse("instance_code");
         zephyr_environments_connection_string = jsonParse("zephyr_environments_connection_string");
         if (browser.equals("chrome"))
             driver = Chromedriver(configFetch(connection, "url"));
         else if(browser.equals("edge"))
             driver = Edgedriver(configFetch(connection, "url"));
+        else if(browser.equals("remote")) {
+
+            driver=remoteDriver((configFetch(connection, "url")));
+        }
         else
             driver = Chromedriver(configFetch(connection, "url"));
 

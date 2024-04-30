@@ -31,10 +31,10 @@ public class intakeDataAdd {
         Select dropdown = new Select(driver.findElement(lobName));
         dropdown.selectByVisibleText(lob);
     }
-    public void selectPayerBy(String payer)
-    {
+    public void selectPayerBy(String payer) throws InterruptedException {
         Select dropdown = new Select(driver.findElement(payerName));
         dropdown.selectByVisibleText(payer);
+        Thread.sleep(3000);
     }
     public void intakeFirstName(String firstName)
     {
