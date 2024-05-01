@@ -1,4 +1,4 @@
 {
   "instance_code": "Working",
-  "zephyr_environments_connection_string": "Data Source=192.168.1.122;Initial Catalog=ZephyrUIPath;Persist Security Info=True;User ID=medicaresqluser;Password=kantime_123"
+  "zephyr_environments_connection_string": "Data Source=192.168.2.231;Initial Catalog=ZephyrUIPath;Persist Security Info=True;User ID=medicaresqluser;Password=kantime_123"
 }
