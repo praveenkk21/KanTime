@@ -1,6 +1,8 @@
 package org.example;
+import org.openqa.selenium.By;
 import org.openqa.selenium.NoAlertPresentException;
 import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.WebElement;
 import org.openqa.selenium.remote.DesiredCapabilities;
 import org.testng.Assert;
 import org.testng.annotations.AfterTest;
@@ -15,6 +17,7 @@ import java.sql.SQLException;
 import static io.netty.util.internal.SystemPropertyUtil.contains;
 import static org.example.customLibrary.*;
 import static org.example.customLibrary.jsonParse;
+import static org.openqa.selenium.support.ui.ExpectedConditions.or;
 
 @Test
 public class AppTest
@@ -54,11 +57,14 @@ public class AppTest
     }
 
     @Test(priority = 1)
-    public void credentialsEntry() throws SQLException {
+    public void credentialsEntry() throws SQLException, InterruptedException {
         loginPage credentialsEntryLogin = new loginPage(driver);
         credentialsEntryLogin.enterUsernameBy(configFetch(connection,"login_id"));
         credentialsEntryLogin.enterPasswordBy(configFetch(connection,"password"));
         credentialsEntryLogin.loginClickBy();
+        Thread.sleep(3000);
+        WebElement title= credentialsEntryLogin.titleCheck();
+        Assert.assertTrue(title.isDisplayed() || title.isEnabled(),"Home/Dashboard page landed successfully");
     }
 
     @Test(priority = 2)
@@ -78,12 +84,14 @@ public class AppTest
         intakeDataAddition.enterDOB(configFetch(connection, "dob"));
         intakeDataAddition.selectPayerBy(configFetch(connection, "payer"));
         intakeDataAddition.clickTerm();
+        Thread.sleep(4000);
         if (elementIsClickable(driver, "btn_admitasnew")) {
             intakeDataAddition.admitClick();
         } else {
             intakeDataAddition.duplicateCheck();
             intakeDataAddition.admitClick();
         }
+        Thread.sleep(4000);
         try {
             driver.switchTo().alert().accept();
         } catch (NoAlertPresentException ex) {

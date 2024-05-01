@@ -2,6 +2,7 @@ package org.example;
 
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.Select;
 
 public class intakeDataAdd {
@@ -32,6 +33,7 @@ public class intakeDataAdd {
         dropdown.selectByVisibleText(lob);
     }
     public void selectPayerBy(String payer) throws InterruptedException {
+        Thread.sleep(3000);
         Select dropdown = new Select(driver.findElement(payerName));
         dropdown.selectByVisibleText(payer);
         Thread.sleep(3000);
@@ -62,5 +64,6 @@ public class intakeDataAdd {
     {
         driver.findElement(admitClick).click();
     }
+
 
 }

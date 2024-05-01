@@ -2,6 +2,7 @@ package org.example;
 
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.WebElement;
 
 public class loginPage {
     WebDriver driver;
@@ -23,5 +24,7 @@ public class loginPage {
     public void loginClickBy() {
         driver.findElement(loginClick).click();
     }
-
+    public WebElement titleCheck()  {
+        return driver.findElement(By.xpath("//*[contains(text(),'Home Healthcare Software')]"));
+    }
 }
