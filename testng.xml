@@ -1,7 +1,10 @@
 <!DOCTYPE suite SYSTEM "http://testng.org/testng-1.0.dtd">
 <suite name="Suite 2" >
+    <listeners>
+        <listener class-name="org.example.listners"/>
+    </listeners>
     <test name="testing">
-        <parameter name="browser" value="edge"/>
+        <parameter name="browser" value="chrome"/>
         <groups>
             <run>
                 <!--                <exclude name="dont run"/>-->
