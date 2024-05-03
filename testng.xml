@@ -1,7 +1,12 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE suite SYSTEM "http://testng.org/testng-1.0.dtd">
-<suite name="All Test Suite">
+<suite name="Suite 2" >
     <test name="testing">
+        <parameter name="browser" value="edge"/>
+        <groups>
+            <run>
+                <!--                <exclude name="dont run"/>-->
+            </run>
+        </groups>
         <classes>
             <class name="org.example.AppTest" />
         </classes>

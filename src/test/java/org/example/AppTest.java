@@ -5,10 +5,7 @@ import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.remote.DesiredCapabilities;
 import org.testng.Assert;
-import org.testng.annotations.AfterTest;
-import org.testng.annotations.BeforeTest;
-import org.testng.annotations.Parameters;
-import org.testng.annotations.Test;
+import org.testng.annotations.*;
 
 import java.net.MalformedURLException;
 import java.sql.Connection;
@@ -18,6 +15,8 @@ import static io.netty.util.internal.SystemPropertyUtil.contains;
 import static org.example.customLibrary.*;
 import static org.example.customLibrary.jsonParse;
 import static org.openqa.selenium.support.ui.ExpectedConditions.or;
+
+@Listeners(listners.class)
 
 @Test
 public class AppTest
