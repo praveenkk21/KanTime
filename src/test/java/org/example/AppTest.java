@@ -8,6 +8,7 @@ import org.testng.Assert;
 import org.testng.annotations.*;
 
 import java.net.MalformedURLException;
+import java.net.URISyntaxException;
 import java.sql.Connection;
 import java.sql.SQLException;
 
@@ -33,7 +34,7 @@ public class AppTest
 
     @Test(priority=0) //,groups = {"dont run"}
     @Parameters ("browser")
-    public void browserOpen(String browser) throws SQLException, MalformedURLException {
+    public void browserOpen(String browser) throws SQLException, MalformedURLException, URISyntaxException {
         instance_code = jsonParse("instance_code");
         zephyr_environments_connection_string = jsonParse("zephyr_environments_connection_string");
         switch (browser) {

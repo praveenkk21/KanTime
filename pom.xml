@@ -68,7 +68,11 @@
 <!--      <version>5.6.4</version>-->
 <!--      <scope>test</scope>-->
 <!--    </dependency>-->
-
+    <dependency>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+      <version>31.0.1-jre</version>
+    </dependency>
   </dependencies>
   <build>
     <plugins>
@@ -87,9 +91,9 @@
         <version>3.2.5</version>
         <configuration>
 
-            <systemPropertyVariables>
-              <browser>chrome</browser>
-            </systemPropertyVariables>
+<!--            <systemPropertyVariables>-->
+<!--              <browser>remote</browser>-->
+<!--            </systemPropertyVariables>-->
 
           <suiteXmlFiles>
             <suiteXmlFile>testng.xml</suiteXmlFile>
