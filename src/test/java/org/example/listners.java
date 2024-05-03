@@ -8,6 +8,7 @@ public class listners implements ITestListener {
     @Override
     public void onTestStart(ITestResult result) {
         ITestListener.super.onTestStart(result);
+        System.out.println(result.getName() +" test is started");
     }
 
     @Override

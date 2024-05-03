@@ -36,22 +36,24 @@ public class AppTest
     public void browserOpen(String browser) throws SQLException, MalformedURLException {
         instance_code = jsonParse("instance_code");
         zephyr_environments_connection_string = jsonParse("zephyr_environments_connection_string");
-        if (browser.equals("chrome"))
-            driver = Chromedriver(configFetch(connection, "url"));
-        else if(browser.equals("edge"))
-            driver = Edgedriver(configFetch(connection, "url"));
-        else if(browser.equals("remote")) {
-
-            driver=remoteDriver((configFetch(connection, "url")));
+        switch (browser) {
+            case "edge":
+                driver = Edgedriver(configFetch(connection, "url"));
+                break;
+            case "remote":
+                driver = remoteDriver((configFetch(connection, "url")));
+                break;
+            default:
+                driver = Chromedriver(configFetch(connection, "url"));
+                break;
         }
-        else
-            driver = Chromedriver(configFetch(connection, "url"));
 
     }
 
     @AfterTest
     public void browserClose() throws SQLException {
         driver.close();
+        driver.quit();
         connection.close();
     }
 

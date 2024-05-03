@@ -2,6 +2,7 @@ package org.example;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import org.openqa.selenium.By;
+import org.openqa.selenium.Platform;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
@@ -24,7 +25,7 @@ public class customLibrary
     public static WebDriver Chromedriver(String url)
     {
         ChromeOptions options = new ChromeOptions();
-        options.addArguments("--headless");
+        //options.addArguments("--headless");
         WebDriver driver = new ChromeDriver(options);
         driver.manage().window().maximize();
         driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(10));
@@ -35,7 +36,7 @@ public class customLibrary
     public static WebDriver Edgedriver(String url)
     {
         EdgeOptions optionsedge = new EdgeOptions();
-        optionsedge.addArguments("--headless");
+        //optionsedge.addArguments("--headless");
         WebDriver driver = new EdgeDriver(optionsedge);
         driver.manage().window().maximize();
         driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(10));
@@ -45,6 +46,8 @@ public class customLibrary
 
     public static WebDriver remoteDriver(String url2) throws MalformedURLException {
         DesiredCapabilities dc=new DesiredCapabilities();
+        dc.setBrowserName("Chrome");
+        dc.setPlatform(Platform.LINUX);
         WebDriver driver = new RemoteWebDriver(new URL("http"),dc);
         driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(10));
         driver.get(url2);
