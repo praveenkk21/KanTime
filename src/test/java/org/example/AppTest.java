@@ -42,7 +42,13 @@ public class AppTest
                 driver = Edgedriver(configFetch(connection, "url"));
                 break;
             case "remote":
-                driver = remoteDriver((configFetch(connection, "url")));
+                driver = remoteDriver((configFetch(connection, "url")),"chrome");
+                break;
+            case "remoteFire":
+                    driver=remoteDriver((configFetch(connection, "url")),"firefox");
+                 break;
+            case "remoteEdge":
+                driver=remoteDriver((configFetch(connection, "url")),"MicrosoftEdge");
                 break;
             default:
                 driver = Chromedriver(configFetch(connection, "url"));

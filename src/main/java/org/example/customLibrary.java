@@ -24,12 +24,29 @@ import java.time.Duration;
 public class customLibrary
 {
 
-    public static WebDriver remoteDriver(String url2) throws MalformedURLException, URISyntaxException {
+    public static WebDriver remoteDriver(String url2,String browser) throws MalformedURLException, URISyntaxException {
         DesiredCapabilities dc=new DesiredCapabilities();
-        dc.setBrowserName("chrome");
-        dc.setPlatform(Platform.LINUX);
-        WebDriver driver = new RemoteWebDriver(new URL("http://localhost:4444/wd/hub"),dc);
+        WebDriver driver=null;
+        if(browser.equals("chrome"))
+        {
+            dc.setBrowserName(browser);
+            dc.setPlatform(Platform.LINUX);
+            driver = new RemoteWebDriver(new URL("http://localhost:4444/wd/hub"),dc);
+        }
+        if(browser.equals("firefox"))
+        {
+            dc.setBrowserName(browser);
+            dc.setPlatform(Platform.LINUX);
+            driver = new RemoteWebDriver(new URL("http://localhost:4444/wd/hub"),dc);
+        }
+        if(browser.equals("MicrosoftEdge"))
+        {
+            dc.setBrowserName(browser);
+            dc.setPlatform(Platform.LINUX);
+            driver = new RemoteWebDriver(new URL("http://localhost:4444/wd/hub"),dc);
+        }
         //driver.manage().window().maximize();
+        assert driver != null;
         driver.get(url2);
         driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(10));
         return driver;
