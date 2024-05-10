@@ -1,5 +1,5 @@
 <!DOCTYPE suite SYSTEM "http://testng.org/testng-1.0.dtd">
-<suite name="Suite 2" parallel="tests" thread-count="4">
+<suite name="Suite 2" parallel="tests" thread-count="6">
 
     <listeners>
         <listener class-name="org.example.listners"/>
@@ -42,6 +42,30 @@
 
     <test name="testingOnChrome2">
         <parameter name="browser" value="remote"/>
+        <groups>
+            <run>
+                <!--                <exclude name="dont run"/>-->
+            </run>
+        </groups>
+        <classes>
+            <class name="org.example.AppTest" />
+        </classes>
+    </test>
+
+    <test name="testingOnedge2">
+        <parameter name="browser" value="remoteEdge"/>
+        <groups>
+            <run>
+                <!--                <exclude name="dont run"/>-->
+            </run>
+        </groups>
+        <classes>
+            <class name="org.example.AppTest" />
+        </classes>
+    </test>
+
+    <test name="testingOnedge3">
+        <parameter name="browser" value="remoteEdge"/>
         <groups>
             <run>
                 <!--                <exclude name="dont run"/>-->
