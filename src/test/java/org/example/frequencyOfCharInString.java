@@ -2,10 +2,15 @@ package org.example;
 
 import org.testng.annotations.Test;
 
+import java.util.Scanner;
+
 public class frequencyOfCharInString {
     @Test
     public void frequencyOfCharInString(){
-        String str="praveenprdcccccc";
+        Scanner sc = new Scanner(System.in);
+       // String str=sc.next();
+        String st="Praveenprdcccccc";
+        String str=st.toLowerCase();
         char[] ch =str.toCharArray();
         for(int i=0;i<str.length();i++){
             if(ch[i]!=0){
