@@ -60,7 +60,7 @@ public class eChartTest {
         }
 
 
-        @Test(priority = 0,groups = {"login","echart"})
+        @Test(priority = 0,groups = {"login","echart","caregiver"})
         public void credentialsEntry() throws SQLException, InterruptedException, IOException {
             loginPage credentialsEntryLogin = new loginPage(driver);
             exc = new exceldriven();
