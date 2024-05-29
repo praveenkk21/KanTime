@@ -1,4 +1,4 @@
-package org.example;
+package org.practices;
 
 import org.openqa.selenium.interactions.Action;
 import org.openqa.selenium.interactions.Actions;

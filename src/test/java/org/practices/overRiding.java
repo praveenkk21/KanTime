@@ -1,4 +1,4 @@
-package org.example;
+package org.practices;
 
 import org.testng.annotations.Test;
 //no static method can be ovverrided
