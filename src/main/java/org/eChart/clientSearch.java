@@ -15,6 +15,7 @@ public class clientSearch {
 
     public void searchClick(String name)
     {
+        driver.findElement(searchClick).click();
         driver.findElement(searchClick).sendKeys(name, Keys.DOWN,Keys.ENTER);
     }
 

@@ -38,7 +38,24 @@ import java.io.IOException;
         cell = sheet.getRow(rowNumber).getCell(cellNumber);
 
         //returning the cell value as string
-        return cell.getStringCellValue();
+        //return cell.getStringCellValue();
+
+        switch (cell.getCellType()) {
+            case STRING:
+                return cell.getStringCellValue();
+            case NUMERIC:
+                // Assuming whole numbers, convert to String
+                return String.valueOf(cell.getNumericCellValue());
+            case BOOLEAN:
+                // Handle boolean values (e.g., convert to "true" or "false")
+                return String.valueOf(cell.getBooleanCellValue());
+            case FORMULA:
+                // Handle formulas (e.g., evaluate and convert to String)
+                return cell.getStringCellValue(); // Might throw exception if formula evaluation fails
+            default:
+                // Handle other cell types (throw exception or return a default value)
+                return ""; // Or throw an exception for unexpected data types
+        }
     }
 
     public int getRowCountInSheet() {

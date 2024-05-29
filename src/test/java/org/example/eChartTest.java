@@ -83,8 +83,9 @@ public class eChartTest {
         }
 
         @Test(priority = 1,groups = {"echart"})
-        public void goToEmTab(){
+        public void goToEmTab() throws InterruptedException {
             episodeManagement em=new episodeManagement(driver);
+            Thread.sleep(5000);
             em.clinicalClick();
             em.emClick();
         }
@@ -95,7 +96,7 @@ public class eChartTest {
         exc.setExcelFile("resources/data.xlsx","eChartMaster");
         String first_name=exc.getCellData(1,0);
         String last_name=exc.getCellData(1,1);
-        String pat_id=exc.getCellData(1,2);
+        String pat_id= exc.getCellData(1,2);
         sc.searchClick(last_name+", "+first_name+" ("+pat_id+")");
     }
 

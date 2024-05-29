@@ -6,7 +6,8 @@ import org.openqa.selenium.WebDriver;
 public class episodeManagement {
     private WebDriver driver;
     By clinicalClick= By.xpath("//*[@id=66 and @class=\"MainMenuItemStyleInner_Training\"]");
-    By emClick=By.xpath("//*[@id=\"td_7\"]");
+    By emClick=By.xpath("//*[@id=\"td_6\"]");
+
 
 
     public episodeManagement(WebDriver driver)

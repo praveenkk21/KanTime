@@ -16,12 +16,12 @@ public class frequencyOfCharInString {
         char[] ch =str.toCharArray();
 
         HashMap<Character, Integer> charFreqMap = new HashMap<>();
-        for (char ch : str.toCharArray()) {
-            if (charFreqMap.containsKey(ch)) {
-                int count = charFreqMap.get(ch);
-                charFreqMap.put(ch, count + 1);
+        for (char ch1 : str.toCharArray()) {
+            if (charFreqMap.containsKey(ch1)) {
+                int count = charFreqMap.get(ch1);
+                charFreqMap.put(ch1, count + 1);
             } else {
-                charFreqMap.put(ch, 1);
+                charFreqMap.put(ch1, 1);
             }
         }
         Iterator itr=charFreqMap.keySet().iterator();
