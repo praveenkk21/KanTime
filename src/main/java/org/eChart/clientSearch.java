@@ -13,9 +13,9 @@ public class clientSearch {
         this.driver=driver;
     }
 
-    public void searchClick(String name)
-    {
+    public void searchClick(String name) throws InterruptedException {
         driver.findElement(searchClick).click();
+        Thread.sleep(2000);
         driver.findElement(searchClick).sendKeys(name, Keys.DOWN,Keys.ENTER);
     }
 

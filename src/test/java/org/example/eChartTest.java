@@ -11,6 +11,9 @@ import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.Iterator;
+import java.util.Set;
+
 import static org.example.customLibrary.*;
 
 @Listeners(listners.class)
@@ -29,8 +32,8 @@ public class eChartTest {
 
     @AfterTest
     public void browserClose() throws SQLException {
-        driver.close();
-        driver.quit();
+//        driver.close();
+//        driver.quit();
         connection.close();
     }
 
@@ -91,7 +94,7 @@ public class eChartTest {
         }
 
     @Test(priority = 2,groups = {"echart"})
-    public void seachClient() throws IOException {
+    public void seachClient() throws IOException, InterruptedException {
         clientSearch sc=new clientSearch(driver);
         exc.setExcelFile("resources/data.xlsx","eChartMaster");
         String first_name=exc.getCellData(1,0);
@@ -107,10 +110,27 @@ public class eChartTest {
         ds.displayClick();
     }
 
-    @Test(priority = 3,groups = {"echart"})
-    public void eChartOpen(){
-        eChartSearch ec=new eChartSearch(driver);
-        ec.eChartLinkClick(Integer.parseInt(exc.getCellData(1,4)));
+    @Test(priority = 4,groups = {"echart"})
+    public void eChartOpen() {
+        eChartSearch ec = new eChartSearch(driver);
+        String parent_window = driver.getWindowHandle();
+        ec.eChartLinkClick(exc.getCellData(1, 4));
+        Set<String> windows = driver.getWindowHandles();
+        Iterator<String> s = windows.iterator();
+        String eChart_popup = null;
+        if (s.hasNext()) {
+            s.next();
+            eChart_popup = s.next();
+            if (!parent_window.equals(eChart_popup)) {
+                driver.switchTo().window(eChart_popup);
+            }
+            System.out.println(driver.getTitle());
+            Assert.assertTrue(driver.getTitle().contains("Visit Chart"));
+        }
+        driver.close();
+        driver.switchTo().window(parent_window);
+        System.out.println(driver.getTitle());
+        Assert.assertTrue(driver.getTitle().contains("Medicar3e"));
     }
 
 }

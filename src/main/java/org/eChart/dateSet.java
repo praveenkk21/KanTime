@@ -25,6 +25,7 @@ public class dateSet {
 
     public void date(String date)
     {
+        System.out.println(date);
         startDate.clear();
         startDate.sendKeys(date);
         endDate.clear();
