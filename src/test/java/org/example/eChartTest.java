@@ -23,6 +23,8 @@ public class eChartTest {
     Connection connection;
     exceldriven exc;
 
+    String eChartStatus;
+
     @BeforeTest
     public void msDbConnect() throws SQLException {
             connection = new customLibrary().dbConnect();
@@ -127,10 +129,34 @@ public class eChartTest {
             System.out.println(driver.getTitle());
             Assert.assertTrue(driver.getTitle().contains("Visit Chart"));
         }
-        driver.close();
-        driver.switchTo().window(parent_window);
-        System.out.println(driver.getTitle());
-        Assert.assertTrue(driver.getTitle().contains("Medicar3e"));
+//        driver.close();
+//        driver.switchTo().window(parent_window);
+//        System.out.println(driver.getTitle());
+//        Assert.assertTrue(driver.getTitle().contains("Medicar3e"));
+    }
+
+    @Test(priority =5)
+    public void startDocumentation() throws InterruptedException {
+        startDocument sd=new startDocument(driver);
+        sd.clickCheckInLink();
+        sd.selectPlaceOfService();
+        sd.clickSaveAndContinue();
+    }
+
+    @Test(priority = 6)
+    public void eChartStatusCheck(){
+        eChartStatus es=new eChartStatus(driver);
+        eChartStatus=es.geteChartStatus();
+        if(eChartStatus.equals("Open"))
+            openeChartDocument(eChartStatus);
+
+    }
+
+    @Test(enabled = false)
+    public void openeChartDocument(String status){
+        chartDocument cd=new chartDocument(driver);
+        cd.setStatus(status)
+        ;
     }
 
 }

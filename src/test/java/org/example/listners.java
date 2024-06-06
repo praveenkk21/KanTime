@@ -7,9 +7,10 @@ import org.openqa.selenium.WebDriver;
 import org.testng.ITestContext;
 import org.testng.ITestListener;
 import org.testng.ITestResult;
-
+import java.text.SimpleDateFormat;
 import java.io.File;
 import java.io.IOException;
+import java.util.Calendar;
 
 public class listners implements ITestListener {
     @Override
@@ -41,9 +42,13 @@ public class listners implements ITestListener {
 
     public void takeScreenShot(String methodName, WebDriver driver) {
         File scrFile = ((TakesScreenshot)driver).getScreenshotAs(OutputType.FILE);
+        Calendar today = Calendar.getInstance();
+        SimpleDateFormat sdf = new SimpleDateFormat("EEE_dd_HHmmss_yyyy");
+        String formattedDate = sdf.format(today.getTime()).toLowerCase();
+        System.out.println(formattedDate);
         //The below method will save the screen shot in d drive with test method name
         try {
-            FileUtils.copyFile(scrFile, new File("screenshots/"+methodName+".png"));
+            FileUtils.copyFile(scrFile, new File("screenshots/"+methodName+"_"+formattedDate+".png"));
             System.out.println("***Placed screen shot in screenshots ***");
         } catch (IOException e) {
             e.printStackTrace();
