@@ -1,9 +1,11 @@
-package org.example;
-import org.openqa.selenium.By;
+package org.tests;
+import org.example.*;
+import org.generic.customLibrary;
+import org.generic.listners;
+import org.login.loginPage;
 import org.openqa.selenium.NoAlertPresentException;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
-import org.openqa.selenium.remote.DesiredCapabilities;
 import org.testng.Assert;
 import org.testng.annotations.*;
 
@@ -12,10 +14,8 @@ import java.net.URISyntaxException;
 import java.sql.Connection;
 import java.sql.SQLException;
 
-import static io.netty.util.internal.SystemPropertyUtil.contains;
-import static org.example.customLibrary.*;
-import static org.example.customLibrary.jsonParse;
-import static org.openqa.selenium.support.ui.ExpectedConditions.or;
+import static org.generic.customLibrary.*;
+import static org.generic.customLibrary.jsonParse;
 
 @Listeners(listners.class)
 
@@ -77,7 +77,7 @@ public class AppTest
 
     @Test(priority = 2)
     public void intakeSetupCodeTest() {
-        intakeSetup  intakePageNav=new intakeSetup(driver);
+        intakeSetup intakePageNav=new intakeSetup(driver);
         intakePageNav.referralClick();
         intakePageNav.intakeClick();
     }

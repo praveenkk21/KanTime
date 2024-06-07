@@ -8,7 +8,7 @@
             </run>
         </groups>
         <classes>
-            <class name="org.example.AppTest" />
+            <class name="org.tests.AppTest" />
         </classes>
     </test>
 </suite>

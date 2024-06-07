@@ -2,6 +2,7 @@ package org.eChart;
 
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.WebElement;
 
 public class eChartStatus {
     private final WebDriver driver;
@@ -10,6 +11,11 @@ public class eChartStatus {
         this.driver=driver;
     }
     public String geteChartStatus(){
-        return driver.findElement(eChartStatus).getText();
+        WebElement cs=driver.findElement(eChartStatus);
+        if(cs.isDisplayed() && cs.isEnabled())
+        {
+            return cs.getText();
+        }
+        return "";
     }
 }

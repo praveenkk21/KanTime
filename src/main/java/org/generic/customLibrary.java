@@ -1,4 +1,4 @@
-package org.example;
+package org.generic;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import org.openqa.selenium.By;
@@ -10,12 +10,10 @@ import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.edge.EdgeDriver;
 import org.openqa.selenium.edge.EdgeOptions;
 import org.openqa.selenium.remote.DesiredCapabilities;
-import org.openqa.selenium.remote.tracing.opentelemetry.SeleniumSpanExporter;
 import org.openqa.selenium.support.ui.Select;
 import org.openqa.selenium.remote.RemoteWebDriver;
 import java.io.FileReader;
 import java.net.MalformedURLException;
-import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.sql.*;
@@ -56,7 +54,7 @@ public class customLibrary
     public static WebDriver Chromedriver(String url)
     {
         ChromeOptions options = new ChromeOptions();
-       // options.addArguments("--headless");
+       //options.addArguments("--headless");
         //options.addArguments("--start-maximized");
         //options.addArguments("--start-fullscreen");
         WebDriver driver = new ChromeDriver(options);

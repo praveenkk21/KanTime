@@ -3,7 +3,7 @@
     <test name="testing">
         <parameter name="browser" value="edge"/>
         <classes>
-            <class name="org.example.AppTest" />
+            <class name="org.tests.AppTest" />
         </classes>
     </test>
 </suite>

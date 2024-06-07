@@ -1,4 +1,4 @@
-package org.example;
+package org.generic;
 
 import org.apache.commons.io.FileUtils;
 import org.openqa.selenium.OutputType;
@@ -22,13 +22,13 @@ public class listners implements ITestListener {
     @Override
     public void onTestSuccess(ITestResult result) {
         ITestListener.super.onTestSuccess(result);
-        System.out.println("The name of the testcase is success :"+result.getName());
+        System.out.println(result.getName() +" is executed successfully");
     }
 
     @Override
     public void onTestFailure(ITestResult result) {
         ITestListener.super.onTestFailure(result);
-        System.out.println("The name of the testcase is failure :"+result.getName());
+        System.out.println(result.getName() +" is failed, Please look at screenshots for more details..");
         String methodName= result.getName().trim();
         ITestContext context = result.getTestContext();
         WebDriver driver = null;

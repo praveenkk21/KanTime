@@ -2,6 +2,7 @@ package org.eChart;
 
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.WebElement;
 
 public class startDocument {
 
@@ -15,14 +16,20 @@ public class startDocument {
     }
 
     public void clickCheckInLink(){
-        driver.findElement(checkInLink).click();
+        WebElement c=driver.findElement(checkInLink);
+        if(c.isDisplayed() && c.isEnabled())
+            c.click();
     }
 
     public void selectPlaceOfService(){
-        driver.findElement(placeOfService).click();
+        WebElement p=driver.findElement(placeOfService);
+        if(p.isDisplayed() && p.isEnabled())
+            p.click();
     }
     public void clickSaveAndContinue() throws InterruptedException {
-        driver.findElement(saveAndContinue).click();
+        WebElement sac=driver.findElement(saveAndContinue);
+        if(sac.isDisplayed() && sac.isEnabled())
+            sac.click();
         Thread.sleep(3000);
     }
 }

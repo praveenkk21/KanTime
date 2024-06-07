@@ -1,57 +1,64 @@
 <!DOCTYPE suite SYSTEM "http://testng.org/testng-1.0.dtd">
-<suite name="Suite 2" parallel="tests" thread-count="2" >
+<suite name="Suite 2" >
+<!--    parallel="tests" thread-count="2" >-->
 
     <listeners>
-        <listener class-name="org.example.listners"/>
+        <listener class-name="org.generic.listners"/>
     </listeners>
-    <test name="testingOnChrome">
-        <parameter name="browser" value="chrome"/>
-        <groups>
-            <run>
-                <!--                <exclude name="dont run"/>-->
-            </run>
-        </groups>
-        <classes>
-            <class name="org.example.AppTest" />
-        </classes>
-    </test>
 
-    <test name="testingOnFire">
-        <parameter name="browser" value="remoteFire"/>
-        <groups>
-            <run>
-                <!--                <exclude name="dont run"/>-->
-            </run>
-        </groups>
+    <test name="on Chrome">
         <classes>
-            <class name="org.example.AppTest" />
-        </classes>
-    </test>
-
-    <test name="testingOnedge">
-        <parameter name="browser" value="remoteEdge"/>
-        <groups>
-            <run>
-                <!--                <exclude name="dont run"/>-->
-            </run>
-        </groups>
-        <classes>
-            <class name="org.example.AppTest" />
-        </classes>
-    </test>
-
-    <test name="testingOnChrome2">
-        <parameter name="browser" value="remote"/>
-        <groups>
-            <run>
-                <!--                <exclude name="dont run"/>-->
-            </run>
-        </groups>
-        <classes>
-            <class name="org.example.AppTest" />
+            <class name="org.tests.caregiverTest"></class>
+            <class name="org.tests.eChartTest"></class>
         </classes>
     </test>
 
 
+<!--    <test name="testingOnChrome">-->
+<!--        <parameter name="browser" value="chrome"/>-->
+<!--        <groups>-->
+<!--            <run>-->
+<!--                &lt;!&ndash;                <exclude name="dont run"/>&ndash;&gt;-->
+<!--            </run>-->
+<!--        </groups>-->
+<!--        <classes>-->
+<!--            <class name="org.tests.AppTest" />-->
+<!--        </classes>-->
+<!--    </test>-->
 
+<!--    <test name="testingOnFire">-->
+<!--        <parameter name="browser" value="remoteFire"/>-->
+<!--        <groups>-->
+<!--            <run>-->
+<!--                &lt;!&ndash;                <exclude name="dont run"/>&ndash;&gt;-->
+<!--            </run>-->
+<!--        </groups>-->
+<!--        <classes>-->
+<!--            <class name="org.tests.AppTest" />-->
+<!--        </classes>-->
+<!--    </test>-->
+
+<!--    <test name="testingOnedge">-->
+<!--        <parameter name="browser" value="remoteEdge"/>-->
+<!--        <groups>-->
+<!--            <run>-->
+<!--                &lt;!&ndash;                <exclude name="dont run"/>&ndash;&gt;-->
+<!--            </run>-->
+<!--        </groups>-->
+<!--        <classes>-->
+<!--            <class name="org.tests.AppTest" />-->
+<!--        </classes>-->
+<!--    </test>-->
+
+<!--    <test name="testingOnChrome2">-->
+<!--        <parameter name="browser" value="remote"/>-->
+<!--        <groups>-->
+<!--            <run>-->
+<!--                &lt;!&ndash;                <exclude name="dont run"/>&ndash;&gt;-->
+<!--            </run>-->
+<!--        </groups>-->
+<!--        <classes>-->
+<!--            <class name="org.tests.AppTest" />-->
+<!--        </classes>-->
+<!--    </test>-->
 </suite>

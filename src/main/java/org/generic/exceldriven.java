@@ -1,18 +1,17 @@
-package org.example;
+package org.generic;
 
 
 import org.apache.poi.xssf.usermodel.XSSFCell;
 import org.apache.poi.xssf.usermodel.XSSFRow;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import org.testng.annotations.Test;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 
- public class exceldriven {
+ public class exceldriven{
     private static XSSFWorkbook workbook;
     private static XSSFSheet sheet;
     private static XSSFRow row;
