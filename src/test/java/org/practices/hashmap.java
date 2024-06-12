@@ -5,7 +5,7 @@ import org.testng.annotations.Test;
 import java.util.HashMap;
 
 @Test
-public class hashmap {
+public class hashmap<I extends Number, S> {
 /*
     const cars = [
             "Saab",
