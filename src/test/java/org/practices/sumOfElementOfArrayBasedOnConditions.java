@@ -10,7 +10,7 @@ public class sumOfElementOfArrayBasedOnConditions {
             if(arr[i]<arr[i+1])
                 sum+=arr[i];
         }
-        if(arr[arr.length-1]<k)
+        if(k > arr[arr.length - 1])
             sum+=arr[arr.length-1];
 
         System.out.print(sum);
