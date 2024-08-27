@@ -14,7 +14,10 @@ public class matchingIntArray {
         int length=0;
         int res=0;
             for ( int k : j){
-            if(k==i){res++;}
-        }System.out.println(res);
+            if(k==i){
+                res++;
+            }
+        }
+            System.out.println(res);
     }
 }
