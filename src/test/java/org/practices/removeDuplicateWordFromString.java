@@ -20,7 +20,10 @@ public class removeDuplicateWordFromString {
                 hp.put(l,1);
             }
         }
-        System.out.println(hp);
+
+        for(String p: hp.keySet()) {
+            System.out.print(p+" ");
+        }
     }
 
 }
