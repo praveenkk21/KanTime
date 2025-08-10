@@ -12,6 +12,7 @@ public class SlidingWindow {
         for(int i=0;i<k;i++){
             currentSum=currentSum+a[i];
         }
+        maxSum=currentSum;
         for(int i=k;i<a.length-k;i++){
             currentSum=currentSum-a[i-k]+a[i];
             maxSum=Math.max(maxSum,currentSum);
