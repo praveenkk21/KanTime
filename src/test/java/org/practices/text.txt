@@ -1,0 +1,3782 @@
+	SOLID
+S - Single Responsibility Principle: One class, one responsibility.
+
+		class PatientCheckInService {
+    void checkInPatient(Patient p, StaffMember staff) {
+        staff.checkInPatient(p);
+    }
+}
+
+class Scheduler {
+    void scheduleAppointment(Patient p, StaffMember staff, Date date) { /*...*/ }
+}
+
+class BillingService {
+    void generateInvoice(Patient p) { /*...*/ }
+}
+O - Open/Closed Principle: Add new features by extension, not modification.
+
+		abstract class StaffMember {
+    abstract void checkInPatient(Patient p);
+}
+
+class Clinician extends StaffMember {
+    @Override
+    void checkInPatient(Patient p) { /* clinical check-in */ }
+}
+
+class OfficeStaff extends StaffMember {
+    @Override
+    void checkInPatient(Patient p) { /* administrative check-in */ }
+}
+L -  Liskov Substitution Principle: Subclasses should act like their parent class.
+	Code that works with a StaffMember should work with any subclass (Clinician, OfficeStaff), as long as the method contract is upheld.
+I - Interface Segregation Principle: Use small, specific interfaces
+	We should not be forced to implement methods they don’t use.
+
+interface CanPrescribe {
+    void prescribeMedication(Patient p);
+}
+
+class Clinician extends StaffMember implements CanPrescribe {
+    @Override
+    public void prescribeMedication(Patient p) { /* prescribe meds */ }
+}
+
+class OfficeStaff extends StaffMember {
+    // Does NOT implement CanPrescribe! Not forced to handle prescribing.
+}
+
+D - Dependency Inversion Principle: Rely on abstractions, not concrete classes.
+
+Top scenario based microservices interview questions
+1. Service Communication and Data Consistency
+If a microservice in the middle of a synchronous REST request chain fails, failure recovery can be handled using resilience patterns to prevent cascading failures and improve system stability. +Here’s how:
+________________________________________
+1. Implement Circuit Breaker Pattern (Prevent System Overload)
+The circuit breaker prevents the system from repeatedly calling a failing service, which could lead to further slowdowns.
+Solution: Use Resilience4j Circuit Breaker to monitor failures and temporarily stop calls to the failing service.
+@CircuitBreaker(name = "orderService", fallbackMethod = "fallbackResponse")
+public String callOrderService() {
+    return restTemplate.getForObject("http://order-service/api/orders", String.class);
+}
+
+public String fallbackResponse(Exception ex) {
+    return "Fallback: Order Service is unavailable, please try again later.";
+}
+📌 How it works:
+Real time example - In simple terms, a circuit breaker is like a safety switch in a system that prevents it from repeatedly trying to do something that’s failing, which could make the situation worse.
+Imagine you're trying to plug an appliance into a socket, but the socket keeps sparking (failing). If you keep plugging it in, it could cause damage. So, you use a circuit breaker to cut off power to that socket temporarily. This gives the system time to recover before you try again.
+In the same way, in a microservices architecture, a circuit breaker monitors calls between services. If one service is failing (for example, it’s too slow or unavailable), the circuit breaker “opens” and stops the system from trying to call that service repeatedly. This helps avoid overloading the failing service and gives it time to recover.
+Once the service seems to be working again (after a timeout or a check), the circuit breaker "closes" and the system can try calling the service again.
+●	If the order-service fails multiple times, the circuit breaker opens and stops further calls.
+●	Once the service recovers, the circuit breaker closes, allowing traffic again.
+________________________________________
+2. Use Retry Mechanism for Temporary Failures
+If the failure is intermittent, retrying after a short delay can resolve the issue.
+Solution: Use Spring Retry to automatically retry failed requests.
+@Retryable(value = {HttpServerErrorException.class}, maxAttempts = 3, backoff = @Backoff(delay = 2000))
+public ResponseEntity<String> callPaymentService() {
+    return restTemplate.getForEntity("http://payment-service/api/payments", String.class);
+}
+📌 How it works:
+Real time example: In simple terms, imagine you're trying to make a phone call, but the line is temporarily bad and the call fails. Instead of hanging up immediately, you try calling again after a short pause, and eventually, the connection works.
+In a system, sometimes a failure is just temporary, like a service being momentarily slow or unavailable. Rather than giving up on the first failure, Spring Retry automatically tries to make the request again after a brief delay. It keeps retrying a few times before it gives up, hoping that the problem will resolve itself in the meantime.
+This approach works well for intermittent issues, where a retry could succeed after a short delay.
+●	If the payment-service fails, the request will retry up to 3 times with a 2-second delay.
+3. Set Timeouts to Avoid Blocking Requests
+If a service is unresponsive, requests may hang indefinitely. Timeouts ensure that failing services do not slow down the entire system.
+Solution: Configure timeouts for outgoing HTTP calls.
+@Bean
+public HttpComponentsClientHttpRequestFactory clientHttpRequestFactory() {
+    HttpComponentsClientHttpRequestFactory factory = new HttpComponentsClientHttpRequestFactory();
+    factory.setConnectTimeout(3000);  // 3 seconds
+    factory.setReadTimeout(5000);     // 5 seconds
+    return factory;
+}
+Real time example : In simple terms, imagine you're waiting in line at a coffee shop, and the barista is taking too long to make your coffee. Instead of waiting forever, you set a limit on how long you're willing to wait. If the coffee isn't ready in that time, you walk away.
+In a system, when one service takes too long to respond, it can slow down everything else. Timeouts are like setting a waiting limit for requests. If a service doesn’t respond within the set time, the system stops waiting and moves on, preventing other parts of the system from getting stuck. This keeps the system running smoothly instead of letting one slow service bring everything to a halt.
+●	If the service does not respond within 5 seconds, the request is aborted.
+________________________________________
+4. Implement Fallback Mechanisms
+When a service fails, return a default response or use a cached response instead.
+Solution: Store recent successful responses in a cache (e.g., Redis) and serve them when the service is down.
+public String fallbackOrderDetails(String orderId, Throwable ex) {
+    return redisCache.get("order_" + orderId, String.class);  // Return cached order details
+}
+How it works:
+Real time example: Absolutely! Here's the same example using Celsius instead of Fahrenheit:
+Example: Weather App with Celsius
+Imagine you're using a weather app that fetches the current temperature from an external service. If the weather service goes down, instead of showing an error, the app can show the last known weather report (stored in cache) while the service is unavailable.
+For example:
+●	Last known report: "Sunny, 24°C"
+●	If the service fails, the app will show "Sunny, 24°C" from the cache, instead of displaying an error message or a blank screen.
+This way, the user still gets a helpful, up-to-date temperature reading based on the last successful data retrieval, even if the weather service is temporarily down. It ensures the app remains useful while the service is unavailable.
+●	If the order service is down, return the last successful response from Redis.
+________________________________________
+5. Use Asynchronous Processing for Non-Critical Requests
+Instead of synchronous REST calls, consider event-driven communication (Kafka, RabbitMQ) for better resilience.
+Solution: Instead of waiting for a response, publish an event to a message queue.
+rabbitTemplate.convertAndSend("order_exchange", "order.created", order);
+How it works:
+Real time example:
+Imagine you're signing up for a new account on a website. Normally, after you fill in your details, the website might wait for each step to complete, such as:
+1.	Create User in the database
+2.	Send Email for confirmation
+In a synchronous system, the website waits for the email service to send the confirmation email before showing you a success message. If the email service is slow or down, the whole user registration might fail, and you’ll have a bad experience.
+With event-driven communication, the process works like this:
+1.	User Registration Service receives your details and immediately publishes an event like "UserRegistered" to a message queue (Kafka or RabbitMQ).
+2.	The Email Service listens for "UserRegistered" events, and when it gets one, it sends a confirmation email.
+●	The order request is queued instead of blocking the request.
+●	Other microservices (e.g., payment, inventory) consume the event asynchronously.
+________________________________________
+Summary: Key Recovery Strategies
+	| Scenario 				| Solution 					| Tool |
+
+| Service fails temporarily 		| Retry with backoff				| Spring Retry |
+| Service is down for a long time 	| Circuit breaker to stop calls 			| Resilience4j |
+| Service is slow or unresponsive 	| Timeouts to prevent blocking 		| RestTemplate Config |
+| Service fails but data is needed 	| Fallback response or cache			| Redis, Resilience4j |
+| Avoid cascading failures 		| Use asynchronous messaging 		| Kafka, RabbitMQ |
+
+________________________________________
+Conclusion
+To handle failure recovery in a synchronous REST-based microservices architecture:
+●	Use Circuit Breaker to prevent repeated calls to a failing service.
+●	Implement Retry for temporary failures with exponential backoff.
+●	Set Timeouts to avoid blocking the request chain.
+●	Use Fallback Responses or Cache for missing data.
+●	Move to Asynchronous Communication for non-critical requests.
+Q2: In an e-commerce application, an order service calls payment and inventory services. How do you ensure that the order is placed only if both payment and inventory updates are successful?
+Ensuring that an order is placed only if both payment and inventory updates are successful in a microservices architecture requires a strategy for distributed transactions and data consistency. Since microservices do not share a single database, traditional ACID transactions are not feasible. Below are effective solutions:
+________________________________________
+1. Use the Saga Pattern (Recommended)
+The Saga Pattern ensures data consistency across multiple services through a sequence of
+compensating transactions.
+Two Saga Approaches:
+1.	Choreography (Event-Driven)
+2.	Orchestration (Centralized Controller)
+Sure! Let's break down the difference between Orchestration and Choreography in terms of steps:
+1. Orchestration
+Orchestration is like a central conductor in a symphony. A central service or orchestrator controls the entire workflow and tells each service what to do in a specific order.
+Steps in Orchestration:
+1.	Central Controller (Orchestrator): A central service or component controls the flow of events or tasks and makes decisions.
+○	For example, this could be a Workflow Engine that guides the entire process.
+2.	Service Invocation: The orchestrator tells each service what to do and in what order.
+○	For example, after the user registers, the orchestrator first calls the Inventory Service, then the Payment Service, and finally the Shipping Service.
+3.	Coordination: The orchestrator waits for each service to finish its task before moving to the next.
+○	It ensures that if any service fails, the process can be stopped or retried.
+4.	Centralized Control: The orchestrator has the full control and logic of the workflow. All communication goes through it.
+○	Any errors or retries are handled by the orchestrator.
+Example:
+In a food delivery app, when an order is placed:
+●	The orchestrator (like a central Order Service) first calls the Payment Service, waits for a response, then calls Inventory, and finally, calls Shipping.
+●	If any service fails, the orchestrator handles retries or failure responses.
+________________________________________
+2. Choreography
+Choreography is a decentralized approach where each service knows what to do and reacts to events or changes on its own. No central controller guides the services. Services work independently but still cooperate by responding to each other's events.
+Steps in Choreography:
+1.	Event-Driven: Each service listens for events from other services to trigger their own actions.
+○	For example, after the Payment Service completes, it publishes an event "PaymentCompleted" that other services (like Shipping or Inventory) listen to and react to.
+2.	No Central Controller: There is no central orchestrator. Each service knows its role and reacts to the events or messages.
+○	Services are aware of their actions and dependencies through the event bus (e.g., Kafka or RabbitMQ), and they don't need a central authority to guide them.
+3.	Loose Coupling: Services are loosely coupled. They don’t need to know about each other’s internal workings, just the events they care about.
+○	For example, the Shipping Service only needs to know that a "PaymentCompleted" event occurred. It doesn't need to know the internal details of the Payment Service.
+4.	Independent Execution: Each service is responsible for its own tasks, and they operate independently.
+○	The services just react to events and don’t wait for a central authority to tell them what to do.
+Example:
+In a food delivery app:
+●	Payment Service publishes an event "PaymentCompleted".
+●	Shipping Service listens for the "PaymentCompleted" event and starts the delivery process.
+●	Inventory Service listens for the "OrderPlaced" event and updates the stock.
+________________________________________
+Key Differences:
+| Aspect 			|Orchestration					|Choreography |
+| Control 			| Centralized (Orchestrator controls the flow) | Decentralized (Each service acts independently) |
+| Flow of Cmnctn	| Centralized (One service tells others what to do) | Event-driven (Services listen for events and react) |
+| Failure Handling 	| Centralized failure management (Orchestrator handles retries and errors) | Each service handles failure independently |
+| Dependencies 		| High (One service depends on the orchestrator) | Low (Services are loosely coupled) |
+| Scalability 		| Can be a bottleneck with a central orchestrator | More scalable due to decentralized nature |
+
+Summary:
+●	Orchestration: One central service controls the workflow, telling each service what to do.
+●	Choreography: Services communicate with each other through events, reacting and acting independently without a central controller.
+________________________________________
+2. Use the Outbox Pattern (Avoid Inconsistencies)
+The Outbox Pattern is like a "safety net" for making sure that events are only sent out after a task is successfully completed. It helps avoid situations where something gets lost or doesn’t match up (called "inconsistencies").
+Real-World Example:
+Imagine you're at a restaurant and you place an order. The waiter writes down your order in a notebook (this is the database), but before your order is sent to the kitchen, the waiter has a "secret folder" (this is the Outbox table) where they also record the order (within the same transaction.) just in case something goes wrong.
+●	Step 1: When you place the order, the waiter writes it down in their notebook and immediately writes it in the secret folder (the Outbox table) with a note saying, "Order placed – needs to be sent to the kitchen."
+●	Step 2: A second person (like a kitchen runner) looks at the secret folder (Outbox table), sees that your order is listed, and then delivers the order to the kitchen.
+●	Step 3: If anything goes wrong (e.g., the waiter or kitchen runner forgets), the secret folder is still there as a backup. They can retry sending your order to the kitchen without worrying that the order was lost.
+In the system:
+●	Outbox Table: A special table that stores events (like "Order Created") that need to be sent to another service (like a payment system or inventory system).
+●	The event relay (like a background worker or Debezium checks this table regularly and sends the event to the right service (like Kafka).
+●	If the system crashes, the event is safe because it’s still in the database (the outbox). So, the system can try again later to send the event.
+Why It’s Useful:
+●	Avoids Inconsistencies: It makes sure that if something goes wrong, the system can retry and won’t lose data (like an order or important event).
+●	Exactly Once Delivery: It ensures that the event (like a new order) is only sent once and isn’t duplicated.
+Example in Code:
+Let’s say you create an order in your Order Service. The event to notify other services is stored in the Outbox table:
+INSERT INTO outbox (event_type, event_data, status)
+VALUES ('ORDER_CREATED', '{order details}', 'PENDING');
+Then, Debezium (or another tool) listens for changes in the Outbox table and sends the event (e.g., "Order Created") to Kafka for further processing.
+Pros and Cons:
+●	Pros:
+○	Ensures that no events are lost, even if there’s a system failure.
+○	Prevents inconsistency because the event is only sent after the database update.
+●	Cons:
+○	You need a separate process (like the event relay) to pick up and send the events, which can add complexity.
+In Summary:
+The Outbox Pattern is a way of safely storing events in a special table to ensure that they are only sent after the database action (like creating an order) is completed successfully. It helps ensure that nothing is lost, and even if something goes wrong, it can be retried later.
+________________________________________
+3. Use Distributed Transactions with 2PC (Not Recommended)
+Two-Phase Commit (2PC) locks resources until all services commit.
+1.	Prepare Phase: Order Service requests transaction commit from Payment & Inventory.
+2.	Commit Phase: If all services agree, the order is committed.
+Problems:
+●	Not scalable (locks resources).
+●	Slow performance due to global coordination.
+Avoid 2PC in microservices. Use Sagas instead.
+________________________________________
+4. Use Idempotency to Prevent Duplicate Orders
+If retry mechanisms exist, they may cause duplicate orders.
+Solution: Add an idempotency key (unique request ID).
+if (orderRepository.existsByTransactionId(request.getTransactionId())) {
+    return ResponseEntity.status(HttpStatus.CONFLICT).body("Duplicate request");
+}
+________________________________________
+5. Use Dead Letter Queues (DLQs) to Handle Failures
+If a message (e.g., Payment event) fails multiple times, move it to a Dead Letter Queue for later processing.
+A Dead Letter Queue (DLQ) is a specialized queue where messages that fail multiple processing attempts are sent. This helps prevent message loss and allows for troubleshooting, debugging, and retrying messages later.
+How a DLQ Works
+1.	Message Processing Attempt
+○	A message (e.g., a Payment Event) is picked up from the main queue and processed.
+2.	Failure Handling & Retry
+○	If the processing fails (e.g., due to a database issue, API failure, or a bug), the message is retried a predefined number of times.
+○	This is typically configured as Max Retry Attempts (e.g., 3 attempts).
+3.	Message Moves to DLQ
+○	If the message still fails after reaching the retry limit, it is moved to the DLQ instead of being discarded.
+○	The DLQ is separate from the main queue and holds these "failed" messages for further action.
+4.	Monitoring & Processing DLQ Messages
+○	Messages in the DLQ can be inspected, fixed, or manually retried later.
+○	Some systems have automated retries with exponential backoff.
+RabbitMQ DLQ Configuration:
+x-dead-letter-exchange: "dlx.orders"
+x-dead-letter-routing-key: "orders.failed"
+Kafka DLQ Setup:
+kafka-topics.sh --create --topic orders.DLQ --partitions 3 --replication-factor 1 --config "retention.ms=604800000"
+________________________________________
+3. API Gateway and Security
+Ques - Your application exposes multiple microservices to the outside world. How would you ensure security, rate limiting, and request validation at the entry point?
+________________________________________
+1. Security - JWT Authentication
+To ensure security at the entry point, we'll use JWT for authentication. All incoming requests will need a valid JWT token to be processed.
+Dependencies (pom.xml):
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-security</artifactId>
+</dependency>
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-web</artifactId>
+</dependency>
+<dependency>
+    <groupId>org.springframework.security</groupId>
+    <artifactId>spring-security-jwt</artifactId>
+</dependency>
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-gateway</artifactId>
+</dependency>
+JWT Authentication Filter:
+@Component
+public class JwtAuthenticationFilter extends OncePerRequestFilter {
+
+    private static final String AUTH_HEADER = "Authorization";
+
+    @Autowired
+    private JwtTokenUtil jwtTokenUtil;
+
+    @Override
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+            throws ServletException, IOException {
+        String token = request.getHeader(AUTH_HEADER);
+
+        if (token != null && token.startsWith("Bearer ")) {
+            token = token.substring(7);
+            try {
+                String username = jwtTokenUtil.getUsernameFromToken(token);
+                if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                    UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                            username, null, new ArrayList<>());
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                }
+            } catch (ExpiredJwtException e) {
+                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "JWT Token expired");
+                return;
+            }
+        }
+
+        filterChain.doFilter(request, response);
+    }
+}
+JWT Token Utility:
+@Component
+public class JwtTokenUtil {
+
+    private String secretKey = "your_secret_key"; // Replace with a secure key
+
+    public String getUsernameFromToken(String token) {
+        return Jwts.parser().setSigningKey(secretKey).parseClaimsJws(token).getBody().getSubject();
+    }
+
+    public boolean validateToken(String token) {
+        try {
+            Jwts.parser().setSigningKey(secretKey).parseClaimsJws(token);
+            return true;
+        } catch (JwtException | IllegalArgumentException e) {
+            return false;
+        }
+    }
+}
+________________________________________
+2. Rate Limiting
+For rate limiting, you can use Bucket4j in Spring Cloud Gateway to throttle requests based on IP or user.
+Rate Limiting Configuration (application.yml):
+spring:
+cloud:
+  gateway:
+    routes:
+      - id: user-service
+        uri: lb://USER-SERVICE
+        predicates:
+          - Path=/users/**
+        filters:
+          - name: RequestRateLimiter
+            args:
+              redis-rate-limiter.replenishRate: 10
+              redis-rate-limiter.burstCapacity: 20
+              redis-rate-limiter.requestedTokens: 1
+This setup uses Redis Rate Limiter with a replenish rate of 10 requests per second and burst capacity of 20 requests. This is applied to requests made to the /users/** endpoint.
+How It Works Behind the Scenes
+1.	A user sends API requests.
+2.	Redis keeps track of how many requests they have made.
+3.	If they exceed 10 per second, new requests are throttled (delayed) or blocked.
+4.	This ensures the system is not overloaded.
+Make sure you have Redis set up and Spring Data Redis dependency included.
+Add Redis Dependency in pom.xml:
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-data-redis</artifactId>
+</dependency>
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-gateway</artifactId>
+</dependency>
+________________________________________
+3. Request Validation
+You can validate incoming requests using Spring Validation annotations (e.g., @Valid, @NotNull, etc.) and interceptors in Spring Boot.
+Example Request Validation:
+public class UserRequest {
+    @NotNull
+    @Size(min = 2, max = 30)
+    private String name;
+
+    @NotNull
+    @Email
+    private String email;
+
+    // Getters and setters
+}
+
+@RestController
+public class UserController {
+
+    @PostMapping("/users")
+    public ResponseEntity<String> createUser(@Valid @RequestBody UserRequest userRequest, BindingResult result) {
+        if (result.hasErrors()) {
+            return ResponseEntity.badRequest().body("Invalid request parameters.");
+        }
+        // Proceed with processing
+        return ResponseEntity.ok("User created successfully!");
+    }
+}
+Enable Validation in Spring Boot:
+@SpringBootApplication
+public class Application {
+    public static void main(String[] args) {
+        SpringApplication.run(Application.class, args);
+    }
+}
+Spring Boot Configuration for Validation:
+@Configuration
+public class ValidationConfig {
+    @Bean
+    public LocalValidatorFactoryBean validator() {
+        return new LocalValidatorFactoryBean();
+    }
+}
+This ensures that the incoming request body is valid according to the constraints in UserRequest (e.g., @NotNull, @Email, @Size, etc.).
+________________________________________
+4. Complete Gateway Setup
+You can configure Spring Cloud Gateway with a combination of filters for authentication, rate-limiting, and request validation.
+application.yml for Gateway:
+spring:
+cloud:
+  gateway:
+    routes:
+      - id: user-service
+        uri: lb://USER-SERVICE
+        predicates:
+          - Path=/users/**
+        filters:
+          - name: RequestRateLimiter
+            args:
+              redis-rate-limiter.replenishRate: 10
+              redis-rate-limiter.burstCapacity: 20
+              redis-rate-limiter.requestedTokens: 1
+          - name: JwtAuthenticationFilter
+          - name: RequestValidationFilter
+You can implement JwtAuthenticationFilter and RequestValidationFilter as custom filters in Spring Cloud Gateway.
+Custom Authentication Filter:
+@Component
+public class JwtAuthenticationFilter implements GlobalFilter {
+    @Override
+    public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
+        String token = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
+
+        if (token != null && token.startsWith("Bearer ")) {
+            // Validate token logic
+        }
+
+        return chain.filter(exchange);
+    }
+}
+Custom Request Validation Filter:
+@Component
+public class RequestValidationFilter implements GlobalFilter {
+    @Override
+    public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
+        // Validate request body logic
+        return chain.filter(exchange);
+    }
+}
+________________________________________
+Conclusion
+In this approach:
+●	JWT Authentication ensures that only valid users can access your microservices.
+●	Rate Limiting prevents abuse by limiting the number of requests a user or service can make within a given time.
+●	Request Validation ensures that incoming requests are correctly formatted and meet the required constraints before being processed by backend services.
+You can extend this with more features (e.g., logging, auditing) as needed. This approach secures the entry point and ensures smooth operation across your microservices architecture.
+________________________________________
+Q7: How would you secure inter-service communication in a microservices architecture?
+When security is applied at the API Gateway level (for external requests), securing inter-service communication within a microservices architecture requires a different approach. Since the API Gateway typically handles external traffic, inter-service communication security ensures that services within the system can communicate securely, even when the traffic is internal.
+Here's how you can secure inter-service communication in a microservices architecture:
+1. Mutual TLS (mTLS) for Service-to-Service Authentication
+Mutual TLS (mTLS) is a mechanism in which both the client and the server authenticate each other using certificates. It ensures that only authorized services can communicate with each other, providing encryption and identity verification.
+Imagine you are visiting a high-security office where both you and the security guard need to verify each other's identity before entry.
+🔹 Normal TLS (One-Way Authentication)
+●	You show your ID card to the security guard.
+●	The guard checks your ID and lets you in.
+●	But you don’t verify if the guard is legit.
+●	This is how standard TLS (SSL) works—your browser verifies a website, but the website doesn’t verify you.
+🔹 Mutual TLS (mTLS - Two-Way Authentication)
+●	You show your ID card to the security guard.
+●	The security guard also shows his ID card to you.
+●	Both of you confirm each other's identity before proceeding.
+●	This ensures mutual trust between both parties.
+👉 mTLS is just this, but for computers talking to each other! It ensures that both services verify each other’s identity before exchanging data.
+How mTLS Works in a Web App?
+1️⃣ Client (Service A) sends a request to Service B. 2️⃣ Service B presents its TLS certificate to prove its identity. 3️⃣ Service A also presents its certificate to prove its identity. 4️⃣ If both certificates are valid, they establish a secure connection and start communication. 5️⃣ If one fails, the connection is denied to prevent fraud.
+Steps:
+●	Generate and distribute certificates to all services in your microservices ecosystem.
+●	Configure each microservice to present its certificate when making requests and verify the certificate of the receiving service.
+●	Use a service mesh like Istio or Linkerd, which automatically handles mTLS for service-to-service communication.
+Example: Enabling mTLS in Spring Boot
+Step 1: Generate Certificates
+Both services need their own certificates using OpenSSL:
+openssl req -new -x509 -days 365 -keyout serviceA.key -out serviceA.crt
+openssl req -new -x509 -days 365 -keyout serviceB.key -out serviceB.crt
+Step 2: Configure mTLS in Spring Boot (application.yml)
+server:
+  port: 8443
+  ssl:
+    enabled: true
+    key-store: classpath:serviceA.p12
+    key-store-password: password
+    trust-store: classpath:serviceB.p12
+    trust-store-password: password
+    client-auth: NEED  # Requires both services to authenticate
+________________________________________
+2. OAuth 2.0 / JWT for Service Authentication
+Another approach is to use OAuth 2.0 or JWT (JSON Web Tokens) to authenticate and authorize service-to-service communication.
+How it works:
+●	Each service is registered with an Identity Provider (IdP) such as Auth0, Okta, or Keycloak.
+●	When one service wants to communicate with another, it first obtains a JWT token from the IdP (using OAuth 2.0) and includes that token in the request header.
+●	The receiving service validates the JWT token to ensure the request is coming from an authorized service.
+Example using JWT Authentication:
+Service A makes a request to Service B with a JWT token:// Service A: Obtain a JWT token (from IdP)
+String token = authService.getJwtTokenForServiceB();
+
+// Send the token as Authorization header
+HttpHeaders headers = new HttpHeaders();
+headers.set("Authorization", "Bearer " + token);
+
+HttpEntity<String> entity = new HttpEntity<>(headers);
+
+ResponseEntity<String> response = restTemplate.exchange(
+        "https://service-b.local/api/endpoint", HttpMethod.GET, entity, String.class);
+Service B validates the JWT token:JWT Token Validation (JwtTokenUtil ):
+@RestController
+public class ServiceBController {
+
+    @GetMapping("/api/endpoint")
+    public ResponseEntity<String> endpoint(@RequestHeader("Authorization") String token) {
+        if (jwtTokenUtil.validateToken(token)) {
+            // Process the request
+            return ResponseEntity.ok("Request authorized");
+        } else {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid token");
+        }
+    }
+}
+@Component
+public class JwtTokenUtil {
+
+    private String secretKey = "your_secret_key";  // Securely store this key
+
+    public boolean validateToken(String token) {
+        try {
+            Jwts.parser().setSigningKey(secretKey).parseClaimsJws(token);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+}
+________________________________________
+3. Service Mesh (Istio, Linkerd)
+A Service Mesh provides a dedicated infrastructure layer to handle service-to-service communication, security, observability, and more. Istio is a popular choice for securing inter-service communication with mTLS, traffic management, and monitoring.
+What is a Service Mesh (Istio, Linkerd) in Simple Terms?
+🔹 Imagine a Delivery Network (Swiggy/Zomato)
+●	You have restaurants (services) preparing food.
+●	You have delivery agents (service mesh) handling communication (picking up and delivering orders).
+●	The customers (users) don’t talk directly to the restaurants; they rely on the delivery agents to route their order correctly.
+Similarly, in a microservices architecture:
+●	Services don’t talk to each other directly.
+●	Instead, a Service Mesh (like Istio or Linkerd) acts as the “delivery network”, managing how services communicate securely, efficiently, and reliably.
+Key Features:
+●	Automatic Mutual TLS: Istio can automatically configure mTLS between services, ensuring encrypted and authenticated communication.
+●	Policy Enforcement: Istio allows you to define security policies, such as requiring mTLS or restricting access based on identity.
+●	Rate Limiting: You can configure Istio to apply rate limits to inter-service calls.
+________________________________________
+4. API Gateway for Internal Communication Security
+If you don't want to use a service mesh or mTLS directly, you can also secure internal communication through the API Gateway (e.g., Spring Cloud Gateway).
+●	The API Gateway can authenticate inter-service calls using JWT or OAuth 2.0, just as it does for external traffic.
+●	You can configure the gateway to validate tokens and enforce security policies for internal requests.
+Example: Inter-Service Communication Through Gateway (JWT Auth):
+●	Service A sends a request to Service B via the Gateway:
+String token = authService.getJwtTokenForServiceB();
+headers.set("Authorization", "Bearer " + token);
+
+HttpEntity<String> entity = new HttpEntity<>(headers);
+ResponseEntity<String> response = restTemplate.exchange(
+        "http://gateway/service-b/api/endpoint", HttpMethod.GET, entity, String.class);
+●	Gateway validates JWT and forwards the request to Service B.
+________________________________________
+5. API Key or Shared Secrets for Inter-Service Communication
+For smaller applications or less complex needs, you can use API Keys or shared secrets for inter-service communication.
+●	API Key: Each service has a unique API key used when making requests to other services.
+●	Shared Secrets: A secret string (or token) is shared between services and included in the headers of the request.
+Example Using API Keys:
+●	Service A sends a request with the API key:
+HttpHeaders headers = new HttpHeaders();
+headers.set("x-api-key", "ServiceA-SecretKey");
+HttpEntity<String> entity = new HttpEntity<>(headers);
+ResponseEntity<String> response = restTemplate.exchange(
+        "http://service-b.local/api/endpoint", HttpMethod.GET, entity, String.class);
+Service B verifies the API key:
+@RestController
+public class ServiceBController {
+
+    @GetMapping("/api/endpoint")
+    public ResponseEntity<String> endpoint(@RequestHeader("x-api-key") String apiKey) {
+        if ("ServiceA-SecretKey".equals(apiKey)) {
+            // Proceed with processing
+            return ResponseEntity.ok("Request authorized");
+        } else {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Invalid API Key");
+        }
+    }
+}
+________________________________________
+Conclusion:
+To secure inter-service communication, you can leverage various strategies:
+1.	Mutual TLS (mTLS) for encrypted and authenticated communication.
+2.	OAuth 2.0 / JWT for token-based authentication between services.
+3.	Service Mesh (e.g., Istio) for advanced security, traffic management, and observability.
+4.	API Gateway for managing and validating internal service-to-service communication.
+5.	API Keys or Shared Secrets for simpler use cases.
+The appropriate method depends on your application's scale, complexity, and security requirements.
+5. Database Management in Microservices
+Ques: You have a user service and an order service, each with its own database. How do you handle queries that require joining data from both + databases?
+In a microservices architecture where each service has its own database, performing a join cross different databases (for example, joining data from a user service and an order service) can be complex.
+Microservices are typically designed to avoid tight coupling, which means that a traditional SQL JOIN across different databases is not a good fit.
+Instead, you can handle this scenario by using some event-driven or data duplication strategies to provide a way to combine data from multiple services. Below are several approaches to handle such queries in a microservices environment:
+________________________________________
+1. API Composition
+API composition is a pattern in which a request to a microservice is handled by calling multiple services and aggregating the results in the API Gateway or a separate service. This is a simple and commonly used solution when you need to combine data from multiple services.
+Imagine you order food from Swiggy/Zomato:
+●	You want to see restaurant details, menu, and delivery time on one screen.
+●	But this data comes from different services:
+○	📍 Restaurant Service → Gives restaurant name & location.
+○	🍕 Menu Service → Provides the list of dishes.
+○	🚴 Delivery Service → Calculates delivery time.
+Instead of calling each service separately, Swiggy’s API Gateway fetches and combines all data into one response.
+How API Composition Works in Microservices?
+🔹 A single request comes to the API Gateway.
+🔹 The API Gateway calls multiple services (like User Service, Order Service, Payment Service).
+🔹 It merges the results and sends one response to the user.
+Example:
+If a user wants to see their orders along with user details, you can make two API calls:
+1.	Call the User Service to fetch user details.
+2.	Call the Order Service to fetch the user’s orders.
+3.	Aggregate both responses and return the combined result.
+Code Example:
+@RestController
+@RequestMapping("/user-orders")
+public class UserOrderController {
+
+    @Autowired
+    private RestTemplate restTemplate;
+
+    @GetMapping("/{userId}")
+    public ResponseEntity<Map<String, Object>> getUserOrders(@PathVariable("userId") String userId) {
+        // Call User Service to get user details
+        ResponseEntity<User> userResponse = restTemplate.exchange(
+                "http://user-service/users/" + userId, HttpMethod.GET, null, User.class);
+
+        // Call Order Service to get orders for the user
+        ResponseEntity<List<Order>> orderResponse = restTemplate.exchange(
+                "http://order-service/orders?userId=" + userId, HttpMethod.GET, null, new ParameterizedTypeReference<List<Order>>() {});
+
+        // Combine the user details and orders
+        Map<String, Object> response = new HashMap<>();
+        response.put("user", userResponse.getBody());
+        response.put("orders", orderResponse.getBody());
+
+        return ResponseEntity.ok(response);
+    }
+}
+Considerations:
+●	Network Latency: This approach may incur some performance overhead as multiple calls to different services need to be made.
+●	Error Handling: You need to handle errors properly in case one of the services is unavailable.
+________________________________________
+2. Database Replication (Denormalization)
+You can replicate some data from one service’s database into the other service’s database. This approach is also known as denormalization. For example, the Order Service can store user details or a user ID as part of the order, which reduces the need for cross-service queries.
+In this case:
+●	User Service can push user data updates to the Order Service (via an event, for example).
+●	The Order Service will have some form of data duplication to make queries faster and avoid joining across databases.
+Steps:
+1.	When a new Order is placed, the Order Service receives the order and stores it, including a reference (e.g., userId ) to the User data.
+2.	The User Service will send an event (e.g., UserUpdatedEvent ) to notify the Order Service of any updates to user data (
+3.	using event-driven mechanisms like Kafka, RabbitMQ, etc.).
+4.	The Order Service stores relevant user data or the user ID within its own database to avoid cross-service querying.
+Example:
+If you need to join data from the User and Order services, the Order service can keep a copy of the user’s name or email along with the order, so you don’t need to query the User Service each time.
+Code Example:
+public class OrderService {
+    public Order createOrder(OrderRequest request) {
+        // Order service keeps a reference of user data like userId
+        Order order = new Order(request.getOrderDetails(), request.getUserId());
+        orderRepository.save(order);
+
+        // Send an event to update or notify the user service for consistency
+        eventPublisher.publish(new OrderCreatedEvent(order));
+
+        return order;
+    }
+}
+Considerations:
+●	Data Consistency: This introduces the challenge of keeping data in sync between services. You’ll need mechanisms for eventual consistency.
+●	Eventual Consistency: Use event-driven mechanisms (e.g., event sourcing, CQRS) to ensure data synchronization between services.
+________________________________________
+3. CQRS (Command Query Responsibility Segregation) and Event Sourcing
+Using CQRS and Event Sourcing allows you to have a read-optimized view that may combine data from multiple services.
+Steps:
+●	In CQRS, you have separate models for reads and writes. The write model (command model) updates data in the respective databases (e.g., User Service and Order Service ).
+●	The read model (query model) is designed for fast retrieval of aggregated data from multiple services, often using a separate read-optimized database or cache.
+Example:
+●	When a new order is created, the Order Service updates its database.
+●	The Event Store (e.g., Kafka, RabbitMQ) receives events for the newly created order and user information.
+●	A Read Model service listens to these events and creates a denormalized view that includes user and order information for efficient querying.
+Considerations:
+●	Complexity: This approach adds complexity due to managing separate models for reading and writing.
+●	Data Consistency: This pattern works well for eventual consistency where real-time consistency isn't a strict requirement.
+________________________________________
+4. Data Federation
+A data federation solution can create a unified query layer that can fetch data from multiple microservices and provide it in a single response. A data federation solution can create a unified query layer that can fetch data from multiple microservices and provide it in a single response.
+In this approach:
+●	A query layer (possibly an API Gateway or dedicated service) communicates with both the User Service and Order Service.
+●	The service then federates the results, combining data from multiple services and returning it in a unified response.
+For example, using GraphQL can help achieve this federation pattern, as GraphQL allows you to define a unified schema that queries multiple backends (services).
+Example (using GraphQL Federation):
+type User {
+    id: ID!
+    name: String!
+}
+
+type Order {
+    id: ID!
+    product: String!
+    userId: ID!
+}
+
+extend type Query {
+    userOrders(userId: ID!): [Order]
+}
+●	You can extend a GraphQL query schema to fetch User and Order data in a single request.
+●	A GraphQL Gateway can fetch data from multiple services, combine them, and return the results in a single response.
+Considerations:
+●	Complexity: Federated systems like GraphQL require a well-defined schema and a sophisticated query resolver.
+●	Overhead: Federation layers might introduce overhead, as queries need to be routed across multiple services.
+________________________________________
+5. Materialized Views (Data Warehousing)
+Another approach is to create a materialized view that combines data from both the User Service and the Order Service into a dedicated reporting database or read-only view.
+Steps:
+●	Periodically (or in real-time), data from the User Service and Order Service is replicated or copied into a separate reporting or read-only database.
+●	You can use ETL (Extract, Transform, Load) processes to synchronize data into this centralized read database.
+●	Queries are then run against the materialized view in the read database, avoiding joins across multiple microservices' databases.
+Considerations:
+●	Synchronization: The challenge is keeping the materialized view updated, especially if data changes frequently.
+●	Cost and Complexity: Maintaining a separate data warehouse or materialized view requires additional infrastructure and management.
+________________________________________
+Conclusion:
+To handle queries that require joining data from multiple services' databases in a microservices architecture, you can:
+1.	API Composition: Make multiple API calls to aggregate data from various services.
+2.	Database Replication (Denormalization): Store necessary data in each service’s database for easier access and avoid cross-service joins.
+3.	CQRS and Event Sourcing: Separate read and write models, using an event store to synchronize and create read-optimized views.
+4.	Data Federation: Use a query layer like GraphQL to fetch data from multiple services and combine it in a single response.
+5.	Materialized Views: Create a read-only data layer that aggregates data from multiple sources, updated periodically or in real-time.
+The right approach depends on your specific use case, including the frequency of the queries, data consistency requirements, and the complexity of your architecture.
+________________________________________
+You’re leading a team managing an e-commerce platform built using microservices. The architecture consists of the following services:
+●	Order Service
+●	Payment Service
+●	Inventory Service
+●	Notification Service
+One day, you notice the following issues:
+1.	Customers report that orders are sometimes placed, but the payment is not processed.
+2.	The Order Service occasionally creates duplicate orders for the same request.
+3.	The Notification Service sends multiple emails for the same order.
+Questions for Discussion:
+1.	How would you debug and identify the root cause of these issues?
+2.	How would you address the eventual consistency problem in such a system?
+3.	What architectural patterns would you use to prevent duplicate orders and emails?
+4.	How would you ensure that the system remains resilient and does not lose data in the case of service failures?
+5.	How would you improve the observability of this system to detect such issues earlier?
+Expected Approach/Answer
+1. Debugging the Root Cause:
+●	Analyze logs and traces using tools like ELK Stack, Jaeger, or Zipkin.
+●	Identify whether the issues stem from network delays, idempotency violations, or message queue retries.
+●	Check database transactions for duplicate inserts or incomplete states.
+2. Addressing Eventual Consistency:
+●	Use the Saga pattern to orchestrate distributed transactions (choreography or orchestration).
+●	Implement retry mechanisms with exponential backoff for failed processes.
+●	Utilize message queues (e.g., Kafka) to ensure reliable event delivery between services.
+3. Preventing Duplicate Orders and Emails:
+●	Enforce idempotency keys for APIs to ensure that duplicate requests don’t result in duplicate processing.
+●	Use distributed locks or deduplication logic in the Order Service.
+●	Add a unique event ID for messages in the Notification Service to avoid processing the same event multiple times.
+4. Ensuring Resilience and Data Integrity:
+●	Implement circuit breakers (e.g., Resilience4j) to handle cascading failures.
+●	Use persistent message queues to guarantee that events aren’t lost during service downtime.
+●	Introduce a dead letter queue (DLQ) for failed messages requiring manual or automated retries.
+5. Improving Observability:
+●	Set up distributed tracing to follow the journey of a request across services.
+●	Add custom metrics for critical business flows (e.g., order creation, payment processing).
+●	Implement real-time alerts for anomalies, such as spikes in duplicate orders or email notifications.
+________________________________________
+Q3: How would you handle eventual consistency in a distributed system where multiple services update different p	arts of a business transaction?
+________________________________________
+2. Service Discovery and Load Balancing
+Q4: Your microservices need to dynamically discover each other without hardcoding URLs. How would you implement service discovery?
+Q5: If a service instance is experiencing high load, how do you ensure traffic is evenly distributed across multiple instances?
+________________________________________
+3. API Gateway and Security
+Q6: Your application exposes multiple microservices to the outside world. How would you ensure security, rate limiting, and request validation at the entry point?
+Q7: How would you secure inter-service communication in a microservices architecture?
+________________________________________
+4. Fault Tolerance and Resilience
+Q8: One of your microservices is calling an external third-party API, which becomes slow. How would you prevent cascading failures in your system?
+Q9: How would you implement a circuit breaker pattern in a Spring Boot microservice?
+________________________________________
+Q11: How do you ensure data consistency across multiple microservices using different databases?
+________________________________________
+6. Event-Driven Architecture
+Q12: Your application needs to notify multiple services when an event occurs (e.g., a new order is placed). How would you design this system?
+Q13: What are the advantages and challenges of using Kafka for event-driven microservices?
+________________________________________
+7. CI/CD and Deployment Strategies
+Q14: How would you deploy microservices with zero downtime?
+Q15: Your microservices are running in Kubernetes. How do you roll back to a previous version if a new deployment has issues?
+________________________________________
+8. Observability, Monitoring, and Logging
+Q16: How do you trace a request that goes through multiple microservices?
+Q17: How would you centralize logs for all microservices and analyze errors efficiently?
+________________________________________
+
+
+
+
+
+Sorting Algo:
+
+
+1.	Bubble sort (j=0 to end-i)
+2.	Selection Sort (j =i+1 to end)
+int[] a={1,3,4,52,4,2};
+
+    for(int i=0;i<=a.length-1;i++){
+      int minIndex=i;
+      for(int j=i+1;j<a.length;j++){
+        if(a[j]<a[minIndex]){
+         minIndex=j;
+        }
+      }
+       int temp= a[i];
+          a[i]=a[minIndex];
+          a[minIndex]=temp;
+    }
+3.	Insertion sort:
+for (int i = 1; i < arr.length; i++) {
+            int key = arr[i];
+            int j = i - 1;
+
+            // Move elements greater than key one position ahead
+            while (j >= 0 && arr[j] > key) {
+                arr[j + 1] = arr[j];
+                j--;
+            }
+            arr[j + 1] = key;
+        }
+
+Advanced Questions
+
+1. Advanced Data Structures and Algorithms:
+a.	How would you implement a concurrent data structure like a thread-safe linked list in Java?
+	Java already has ConcurrentLinkedQueue<> which is thread-safe and lock-free.
+
+import java.util.concurrent.ConcurrentLinkedQueue;
+public class ThreadSafeLinkedListExample {
+    public static void main(String[] args) {
+        ConcurrentLinkedQueue<String> list = new ConcurrentLinkedQueue<>();
+
+        list.add("One");
+        list.add("Two");
+
+        // Thread-safe iteration and modification
+        list.remove("One");
+
+        for (String item : list) {
+            System.out.println(item);
+        }
+    }
+}
+
+b.	Write a Java program to find all permutations of a given string.
+	public static void generatePermutations(String prefix, String remaining) {
+        if (remaining.isEmpty()) {
+            System.out.println(prefix);
+            return;
+        }
+
+        for (int i = 0; i < remaining.length(); i++) {
+            char currentChar = remaining.charAt(i);
+            String before = remaining.substring(0, i);
+            String after = remaining.substring(i + 1);
+            generatePermutations(prefix + currentChar, before + after);
+        }
+    	}
+c.	How do you implement a Least Recently Used (LRU) cache in Java?
+
+d.	Describe how you would implement a tree data structure in Java.
+
+2. Concurrency and Multithreading:
+a.	Explain the Java Memory Model and its implications for multithreaded programming.
+
+b.	What are the differences between synchronized blocks and java.util.concurrent locks? When would you use each?
+
+c.	How would you implement a producer-consumer problem using Java's concurrency utilities?
+
+d.	Discuss the use of CompletableFuture and how it can be used for asynchronous programming in Java.
+
+3. Java Performance and Optimization:
+a.	How do you identify and optimize performance bottlenecks in a Java application?
+
+b.	What is the role of the Just-In-Time (JIT) compiler in Java, and how does it affect performance?
+
+c.	Explain how garbage collection works in Java and how you can tune it for better performance.
+
+4. Java 8 and Functional Programming:
+a.	Discuss the benefits of using lambda expressions and streams introduced in Java 8.
+
+b.	How do you implement a custom collector for Java Streams?
+
+c.	Explain the difference between map, reduce, and collect operations in Java Streams.
+5. Object-Oriented Design:
+a.	Design a thread-safe singleton class in Java.
+
+b.	How would you use design patterns such as Factory, Singleton, and Observer in Java applications?
+1. Factory Pattern – Creation Pattern
+🔹 Use Case:
+When you want to delegate the object creation logic and return different types of objects based on input.
+
+🔸 Example: Notification Sender
+
+interface Notification {
+    void send(String message);
+}
+
+class EmailNotification implements Notification {
+    public void send(String message) {
+        System.out.println("Email sent: " + message);
+    }
+}
+
+class SMSNotification implements Notification {
+    public void send(String message) {
+        System.out.println("SMS sent: " + message);
+    }
+}
+
+class NotificationFactory {
+    public static Notification createNotification(String type) {
+        if (type.equalsIgnoreCase("EMAIL")) return new EmailNotification();
+        if (type.equalsIgnoreCase("SMS")) return new SMSNotification();
+        return null;
+    }
+}
+🔸 Usage:
+
+Notification notification = NotificationFactory.createNotification("EMAIL");
+notification.send("Welcome to Factory Pattern!");
+✅ Benefits:
+Centralized object creation
+
+Loose coupling
+
+Easily extendable
+
+2. Singleton Pattern – Creational Pattern
+🔹 Use Case:
+When you want to ensure a class has only one instance, such as:
+
+Logger
+
+ConfigManager
+
+DatabaseConnection
+
+🔸 Thread-safe Singleton (Double-checked Locking)
+
+class Singleton {
+    private static volatile Singleton instance;
+
+    private Singleton() {}
+
+    public static Singleton getInstance() {
+        if (instance == null) {
+            synchronized (Singleton.class) {
+                if (instance == null)
+                    instance = new Singleton();
+            }
+        }
+        return instance;
+    }
+}
+✅ Benefits:
+Controlled access to a single resource
+
+Lazy-loaded
+
+Thread-safe
+
+3. Observer Pattern – Behavioral Pattern
+🔹 Use Case:
+When you want multiple objects to be notified of changes to another object.
+Example: Messaging systems, UI frameworks, event systems.
+
+🔸 Example: Weather Station Notifying Display Devices
+
+interface Observer {
+    void update(float temp);
+}
+
+interface Subject {
+    void register(Observer o);
+    void remove(Observer o);
+    void notifyObservers();
+}
+
+class WeatherStation implements Subject {
+    private List<Observer> observers = new ArrayList<>();
+    private float temperature;
+
+    public void setTemperature(float temp) {
+        this.temperature = temp;
+        notifyObservers();
+    }
+
+    public void register(Observer o) { observers.add(o); }
+    public void remove(Observer o) { observers.remove(o); }
+
+    public void notifyObservers() {
+        for (Observer o : observers)
+            o.update(temperature);
+    }
+}
+
+class PhoneDisplay implements Observer {
+    public void update(float temp) {
+        System.out.println("Phone: Temperature is " + temp);
+    }
+}
+🔸 Usage:
+
+WeatherStation station = new WeatherStation();
+PhoneDisplay phone = new PhoneDisplay();
+
+station.register(phone);
+station.setTemperature(25.0f);
+✅ Benefits:
+Loose coupling between subject and observers
+
+Easy to add/remove listeners
+
+Common in event-driven systems
+
+🧠 Summary Table:
+Pattern	Type	Purpose
+Factory	Creational	Creates objects based on logic/input
+Singleton	Creational	Restricts class to one instance
+Observer	Behavioral	Notify dependents when object changes
+c.	Explain how you would refactor a large, monolithic class into a set of well-designed, smaller classes.
+1.	Understand the Responsibilities- business logics etc
+2.	Group Related Behaviors
+3.	Extract Smaller Classes
+
+6. System Design:
+a.	How would you design a distributed system for handling millions of concurrent users in Java?
+	To handle millions of concurrent users in Java, design a distributed system using stateless Spring Boot microservices orchestrated via Kubernetes for horizontal scalability.
+Use an API Gateway (like Spring Cloud Gateway) to route traffic, and a load balancer (like AWS ELB) to distribute requests evenly. Implement caching (Redis) and asynchronous messaging (Kafka) to reduce latency and decouple services. Persist data using scalable databases (like PostgreSQL, MongoDB) and secure communication with JWT/OAuth2 authentication. Ensure observability and fault tolerance using centralized logging (ELK), monitoring (Prometheus + Grafana), and resilience patterns like circuit breakers (Resilience4j).
+b.	Discuss how you would design a real-time analytics system using Java-based technologies.
+
+7. Miscellaneous:
+a.	How do you implement serialization in Java, and what are the challenges associated with it?
+	With the help of Serializable marker interface, Not Portable Across Languages, Security concerns
+b.	Explain the concept of volatile keyword and its use cases in Java.
+
+c.	What are soft, weak, and phantom references in Java, and how do they differ? - relates to JVM/GC
+
+ Apexon:
+1.	Problem Statement:
+You are given an ingredient list for one person. You want to cook it for nPersons, so you must multiply the quantities.
+Each ingredient is a string in this format:
+<number> <unit or word(s)>
+You should only multiply the number in each line by nPersons, and preserve the rest of the line as it is.
+
+Example Input:
+
+nPersons = 3
+ingredients = [
+  "2 eggs",
+  "200 grams of flour",
+  "150 grams of sugar",
+  "1 liter(s) of milk"
+]
+
+Expected Output:
+
+[
+  "6 eggs",
+  "600 grams of flour",
+  "450 grams of sugar",
+  "3 liter(s) of milk"
+]
+
+✅ Solution in Java:
+
+import java.util.*;
+
+public class Solution {
+
+    public static List<String> adjustQuantities(int nPersons, List<String> ingredients) {
+        List<String> result = new ArrayList<>();
+
+        for (String ingredient : ingredients) {
+            // Split into number and the rest
+            int spaceIndex = ingredient.indexOf(' ');
+            int quantity = Integer.parseInt(ingredient.substring(0, spaceIndex));
+            String rest = ingredient.substring(spaceIndex);
+
+            // Multiply and reconstruct
+            int newQuantity = quantity * nPersons;
+            result.add(newQuantity + rest);
+        }
+
+        return result;
+    }
+
+
+
+
+ public static void main(String[] args) {
+        List<String> ingredients = Arrays.asList(
+            "2 eggs",
+            "200 grams of flour",
+            "150 grams of sugar",
+            "1 liter(s) of milk"
+        );
+        int nPersons = 3;
+
+        List<String> adjusted = adjustQuantities(nPersons, ingredients);
+        for (String line : adjusted) {
+            System.out.println(line);
+        }
+    }
+}
+
+2.	Problem Statement:
+Given a list of instructions like:
+
+"FORWARD"
+
+"BACKWARD"
+
+"LEFT"
+
+"RIGHT"
+
+A robot starts at (0,0) facing right (direction 0), and moves accordingly. If the robot ends not at (0,0), we want to fix exactly one instruction (say, the first) to another valid command so that it does return to (0,0).
+
+✅ Direction Mapping (dir):
+0 → Right (+x)
+
+1 → Up (+y)
+
+2 → Left (−x)
+
+3 → Down (−y)
+
+✅ Java Code Template (Complete Fix Logic):
+
+import java.util.*;
+
+public class DirectionFix {
+
+    public static String fixFirstInstruction(List<String> commands) {
+        String[] possible = {"FORWARD", "BACKWARD", "LEFT", "RIGHT"};
+
+        for (String cmd : possible) {
+            List<String> test = new ArrayList<>(commands);
+            test.set(0, cmd); // Try changing the first instruction
+
+            int x = 0, y = 0, dir = 0;
+
+            for (String inst : test) {
+                if (inst.equals("FORWARD")) {
+                    if (dir == 0) x++;
+                    else if (dir == 1) y++;
+                    else if (dir == 2) x--;
+                    else if (dir == 3) y--;
+                } else if (inst.equals("BACKWARD")) {
+                    if (dir == 0) x--;
+                    else if (dir == 1) y--;
+                    else if (dir == 2) x++;
+                    else if (dir == 3) y++;
+                } else if (inst.equals("LEFT")) {
+                    dir = (dir + 3) % 4;
+                } else if (inst.equals("RIGHT")) {
+                    dir = (dir + 1) % 4;
+                }
+            }
+
+            if (x == 0 && y == 0) {
+                return cmd; // This fix leads robot back to origin
+            }
+        }
+
+        return "NO FIX FOUND";
+    }
+
+    public static void main(String[] args) {
+        List<String> commands = Arrays.asList("RIGHT", "FORWARD", "FORWARD"); // Example
+        String fixed = fixFirstInstruction(commands);
+        System.out.println("Fix first instruction to: " + fixed);
+    }
+}
+✅ Example:
+Input: ["RIGHT", "FORWARD", "FORWARD"]
+Output: Fix first instruction to: LEFT
+
+This means changing "RIGHT" to "LEFT" would allow the robot to return to origin (0,0).
+
+
+Shell:
+
+
+Nagarro:
+
+1.	Tell me the various design patterns used in microservices?
+
+✅ 1. API Gateway Pattern
+Purpose: Acts as a single entry point to access multiple microservices.
+
+Key Features:
+
+Request routing
+
+Aggregation of results from multiple services
+
+Cross-cutting concerns like authentication, logging, rate limiting
+
+Example:
+
+Clients don’t call individual microservices directly.
+
+Instead, they hit the API Gateway (/order), which internally calls /product-service, /payment-service, etc.
+
+Tools: Netflix Zuul, Spring Cloud Gateway, NGINX, Kong
+
+Diagram:
+
+[Client] → [API Gateway] → [Auth Service]
+                             [Order Service]
+                             [User Service]
+
+✅ 2. Service Discovery Pattern
+Purpose: Enables services to dynamically discover each other instead of hardcoding URLs.
+
+Types:
+
+Client-side discovery (Eureka): Client queries the service registry and routes the request.
+
+Server-side discovery (AWS ELB): Load balancer queries the registry and routes it.
+
+Tools: Netflix Eureka, Consul, Zookeeper
+
+Example:
+
+// Service A registers with Eureka
+// Service B discovers A through Eureka and calls it
+
+
+✅ 3. Circuit Breaker Pattern
+Purpose: Prevents cascading failures when a service is down or slow.
+
+How it works:
+
+Monitor responses.
+
+Opens the circuit if failures exceed a threshold.
+
+Waits before trying again (half-open state).
+
+Tools: Netflix Hystrix (deprecated), Resilience4j
+
+Example:
+
+@CircuitBreaker(name = "userService", fallbackMethod = "fallbackUser")
+public String getUser() { ... }
+
+✅ 4. Saga Pattern
+Purpose: Handles distributed transactions across microservices.
+
+Types:
+
+Orchestration: Central coordinator controls transaction flow.
+
+Choreography: Each service publishes events and reacts to others’ events.
+
+Example (Orchestration):
+
+Order Service: creates order
+
+Payment Service: deducts amount
+
+Inventory Service: reduces stock
+
+If Inventory fails → rollbacks Payment and Order
+
+Tools: Axon, Eventuate, Camunda
+
+✅ 5. Database per Service Pattern
+Purpose: Each microservice manages its own database schema to ensure decoupling.
+
+Benefits:
+
+Autonomy
+
+Scaling per service
+
+Isolation of data failures
+
+Drawback: Harder to do JOINs or cross-service reporting
+
+Example:
+
+User Service → user_db\n
+
+Order Service → order_db
+
+✅ 6. Strangler Fig Pattern
+Purpose: Incrementally migrate from monolith to microservices.
+
+How it works:
+
+New features go to microservices
+
+Old monolith is slowly retired
+
+Example:
+
+All new orders go to order-microservice
+
+Old order logic still lives in monolith for legacy clients
+
+✅ 7. CQRS (Command Query Responsibility Segregation) Pattern
+Purpose: Separates read and write responsibilities.
+
+Use Cases:
+
+High-read/low-write systems
+
+Event sourcing
+
+Example:
+
+Write request → Command Handler → Update DB
+
+Read request → Query Handler → Read-optimized DB
+
+✅ 8. Bulkhead Pattern
+Purpose: Isolates failures within parts of the system.
+
+How it works:
+
+Allocate resources (like threads) per service/component.
+
+If one fails, others continue running.
+
+Tools: Resilience4j, Istio
+
+✅ 9. Sidecar Pattern
+Purpose: Attach a helper service (like logging or proxy) alongside the main service.
+
+Example:
+
+A logging agent (Fluentd) runs as a sidecar to every service pod in Kubernetes.
+
+✅ 10. Ambassador Pattern
+Purpose: Isolates communication tasks (like retry, failover, auth) from the main app.
+
+Example:
+
+Ambassador container handles HTTP communication while the app focuses only on business logic.
+
+2.	What is the service discovery pattern?
+
+Purpose: Enables services to dynamically discover each other instead of hardcoding URLs.
+
+Types:
+
+Client-side discovery (Eureka): Client queries the service registry and routes the request.
+
+Server-side discovery (AWS ELB): Load balancer queries the registry and routes it.
+
+Tools: Netflix Eureka, Consul, Zookeeper
+
+Example:
+
+// Service A registers with Eureka
+// Service B discovers A through Eureka and calls it
+
+
+3.	explain saga patterns how it handles rollback ?
+
+Order Service emits OrderCreated
+
+@KafkaTemplate
+private KafkaTemplate<String, String> kafkaTemplate;
+
+public void createOrder(Order order) {
+    orderRepo.save(order);
+    kafkaTemplate.send("order-created", new ObjectMapper().writeValueAsString(order));
+}
+
+Payment Service listens to order-created and emits payment-successful or payment-failed
+
+@KafkaListener(topics = "order-created")
+public void processPayment(String message) {
+    Order order = new ObjectMapper().readValue(message, Order.class);
+    try {
+        // process payment
+        kafkaTemplate.send("payment-successful", message);
+    } catch (Exception ex) {
+        kafkaTemplate.send("payment-failed", message);
+    }
+}
+
+Inventory Service listens to payment-successful
+
+@KafkaListener(topics = "payment-successful")
+public void reserveStock(String message) {
+    Order order = new ObjectMapper().readValue(message, Order.class);
+    if (inventoryAvailable(order)) {
+        kafkaTemplate.send("stock-reserved", message);
+    } else {
+        kafkaTemplate.send("stock-reservation-failed", message);
+    }
+}
+
+4.	different AWS cloud element and explain differences?
+
+
+Feature	EC2	Lambda	Elastic Beanstalk
+Control	Full VM access	No server, code only	Partial (you upload code)
+Pricing	Pay for uptime	Pay per request (ms)	Based on underlying EC2
+Use case	Custom apps, long-running	Small jobs, serverless apps	Auto-deploy REST/Java/web apps
+Scalability	Manual or auto-scaling	Auto (built-in)	Auto (managed for you)
+
+
+5.	difference between EC2 and lamba?
+
+6.	what will be used to automate the scaling resources in EC2 or beanstalk?
+
+Use: Auto Scaling Group (ASG) + CloudWatch Alarms
+
+🔧 Setup:
+Launch Template / Launch Configuration (defines EC2 instance settings)
+
+Auto Scaling Group (ASG): Manages a fleet of EC2s
+
+CloudWatch Alarms: Triggers scale-in/scale-out
+
+🧠 Example:
+Scale out: Add EC2 instance when CPU > 70% for 5 minutes
+
+Scale in: Remove instance when CPU < 30% for 10 minutes
+
+7.	difference runnable and callable interfaces?
+
+| Feature                | `Runnable`                      | `Callable<V>`                        |
+| ---------------------- | ------------------------------- | ------------------------------------ |
+| **Introduced in**      | Java 1.0                        | Java 1.5                             |
+| **Return Value**       | Does **not** return a result    | Returns a result of type `V`         |
+| **Exception Handling** | Cannot throw checked exceptions | Can throw checked exceptions         |
+| **Method**             | `void run()`                    | `V call()`                           |
+| **Used With**          | `Thread`, `ExecutorService`     | `ExecutorService` (e.g., `submit()`) |
+
+
+8.	Tell me the principles of RESTFull api services?
+
+The core principles of RESTful API services include:
+●	Statelessness: Every client request must contain all necessary information, and the server does not store session data.
+
+●	Client-Server Architecture: Separation of frontend (client) and backend (server), enabling independent development.
+
+●	Uniform Interface: Consistent use of HTTP methods (GET, POST, PUT, DELETE), standardized URI structures, and proper status codes.
+
+●	Resource-Based Design: Every entity is treated as a resource accessible via a unique URI (e.g., /users/1).
+
+●	Representation-Oriented: Resources are returned in standard formats like JSON or XML.
+
+●	Caching: Responses should include headers to indicate cacheability (Cache-Control, ETag) for improved performance.
+
+●	Layered System: APIs can work through intermediaries like load balancers and proxies without the client knowing.
+
+●	HATEOAS (optional): APIs can include links in responses to guide clients on next available actions dynamically.
+
+9.	Different ways microservices communicate with each other?
+
+	Microservices in Spring Boot communicate using REST APIs for synchronous calls (e.g., using RestTemplate or WebClient), and message brokers like RabbitMQ or Kafka for asynchronous communication. For example, a payment service can call an order service via REST, or publish an event to Kafka for inventory updates.
+
+10.	What will happen if we do not override the equals and hashCode method?
+
+	If we do not override equals and hashCode, object comparisons will use the default reference equality, and collections like HashSet or HashMap may not work as expected. For example, two objects with the same data will be treated as different keys in a HashMap, leading to duplicate entries.
+
+
+
+@Override
+public int hashCode() {
+    return Objects.hash(id, name);
+}
+
+11.	Difference between stream, and collection API?
+
+Stream API in Java is built on the concept of functional programming and lazy evaluation.
+
+* Internally, it uses Spliterators to traverse and partition data efficiently.
+
+* Intermediate operations (like map, filter) are lazy and return a new stream, allowing for pipelining.
+
+* Terminal operations (like collect, forEach) trigger the actual processing.
+
+* Streams leverage internal iteration instead of external iteration, improving performance and readability.
+
+	The main difference is that Collections in Java represent data structures that store and manage groups of objects, such as List, Set, and Map, allowing for storage, retrieval, and modification. For example, an ArrayList can add, remove, or access elements directly.
+
+In contrast, Streams are used for processing sequences of elements from a Collection in a functional style, enabling operations like filtering, mapping, and reducing without modifying the underlying data. For instance, you can use a Stream to filter all even numbers from a List without changing the original List. Additionally, Collections are eagerly constructed and store data, while Streams are computed on-demand and do not store data themselves, making them suitable for pipeline processing and parallel execution.
+
+12.	Why have they introduced default and static methods in functional interfaces?
+	Default and static methods were introduced in interfaces to enhance interface flexibility and support backward compatibility. Firstly, default methods allow developers to add new methods to interfaces without breaking existing implementations; for example, if a library interface adds a new method, existing classes implementing the interface won't be forced to implement it.
+Secondly, static methods enable utility or helper methods to be defined directly in the interface, such as Collections.sort() in the Collections interface, making related functionality easily accessible. These features are especially useful in functional interfaces, as they allow for richer APIs while maintaining the single abstract method requirement.
+
+13.	What is the difference between Docker container, DOcker daemon and Docker client?
+	The Docker container is a lightweight, standalone, and executable package that includes everything needed to run a piece of software, such as code, runtime, and dependencies. For example, a Java Spring Boot application can be packaged and run inside a Docker container.
+
+The Docker daemon is a background service that manages Docker containers, images, networks, and storage; it listens for Docker API requests and handles container lifecycle operations. For instance, when you run 'docker run', the Docker daemon creates and starts the container.
+
+The Docker client is the command-line tool or interface that users interact with to communicate with the Docker daemon, such as running 'docker build' or 'docker ps'. This separation allows users to manage containers easily while the daemon handles the heavy lifting in the background.
+
+14.	Difference between virtual machine and docker container?
+	The main difference is that virtual machines (VMs) virtualize hardware, while Docker containers virtualize the operating system. For example, a VM runs its own OS on top of a hypervisor, which means it is heavier and uses more resources;
+In contrast, a Docker container shares the host OS kernel, making it lightweight and faster to start. Another point is isolation: VMs provide strong isolation as each has its own OS, while containers are isolated at the process level but share the same OS.
+	For instance, running multiple VMs for microservices can be resource-intensive, but using containers allows efficient scaling and deployment. Finally, containers are more portable, as you can run them consistently across different environments, such as development, testing, and production.
+
+15.	Create a custom listing id and implement add and remove method in java/custom add and remove in your own custom arraylist?
+class CustomArrayList {
+    private int[] data;
+    private int size;
+    public CustomArrayList() {
+        data = new int[10];
+        size = 0;
+    }
+    public void add(int value) {
+        if (size == data.length) {
+            int[] newData = new int[data.length * 2];
+            System.arraycopy(data, 0, newData, 0, data.length);
+            data = newData;
+        }
+        data[size++] = value;
+    }
+    public void remove(int index) {
+        if (index < 0 || index >= size) throw new IndexOutOfBoundsException();
+        for (int i = index; i < size - 1; i++) {
+            data[i] = data[i + 1];
+        }
+        size--;
+    }
+}
+16.	Difference between constructor and field injection?
+	Constructor injection involves passing dependencies to a class via its constructor, ensuring that all required dependencies are provided at object creation. For example, in Spring Boot, using @Autowired on a constructor guarantees that the dependency is not null and supports immutability.
+Field injection, on the other hand, injects dependencies directly into class fields using annotations like @Autowired, which can make testing and refactoring harder. For instance, field injection does not allow marking dependencies as final and can lead to issues with circular dependencies. Constructor injection is generally preferred for better testability and maintainability.
+
+@Constructor Injection
+public class Service {
+    		private final Repository repo;
+    		public Service(Repository repo) {
+        		this.repo = repo;
+    		}
+}
+
+@Setter Injection
+public class Service {
+    private Repository repo;
+    public void setRepository(Repository repo) {
+        this.repo = repo;
+    }
+}
+
+@Field Injection
+public class Service {
+    @Autowired
+    private Repository repo;
+}
+
+
+17.	for many to many, how many tables do we need in the database?
+	In a many-to-many relationship, we need three tables in the database. First, there are two main entity tables, such as 'students' and 'courses', each representing a distinct entity. Second, we require a join table (also called a mapping or associative table),
+for example, 'student_courses', which holds foreign keys referencing the primary keys of both entity tables. This join table enables the many-to-many association by linking multiple records from one table to multiple records in the other, ensuring data integrity and efficient querying.
+
+18.	Difference between jpa and hibernate?
+JPA (Java Persistence API) is a specification that defines a set of interfaces and guidelines for object-relational mapping (ORM) in Java, while Hibernate is a popular implementation of the JPA specification. For example, JPA provides standard annotations like @Entity and @Table, but does not provide the actual code to persist objects; Hibernate implements these interfaces and provides the underlying functionality to map Java objects to database tables. Additionally, Hibernate offers extra features beyond the JPA standard, such as its own query language (HQL) and advanced caching mechanisms. In summary, JPA is the standard API, and Hibernate is a framework that implements and extends this standard.
+
+✅ Core Java Questions:
+1.	Difference between == and .equals() in Java?
+
+2.	What is the use of transient keyword?
+	The transient keyword in Java is used to indicate that a particular field of a class should not be serialized. Serialization is the process of converting an object's state into a byte stream, which can then be reverted back into a copy of the object. Fields marked as transient are skipped during this process.
+	@Transient - It will opt out the variable to map to table from the entity table, it tells not to update the table if this annotation added on top of variable, it is used for logic implementation.
+
+3.	Explain the Java Memory Model (Heap, Stack).
+
+Stack	Heap
+Memory is allocated in a contiguous block.	Memory is allocated in any random order.
+Allocation and deallocation are automatic (handled by compiler).	Allocation and deallocation are manual (handled by programmer).
+It is less costly	It is more costly
+Its implementation is easy	Its implementation is hard
+Access time is faster	Access time is slower
+Limited memory size may lead to shortage issues.	Can suffer from memory fragmentation due to dynamic allocation.
+Stack provides excellent memory locality	Heap is adequate but not as efficient
+Thread safe, data stored can only be accessed by the owner	Not thread safe, data stored is visible to all threads
+Stack is fixed in size	Heap allows resizing as needed
+Stack uses a linear data structure	Heap uses a hierarchical data structure
+Static memory allocation is preferred in an array.	Heap memory allocation is preferred in the linked list.
+Smaller than heap memory.	Larger than stack memory.
+
+
+4.	Difference between ArrayList and LinkedList?
+
+5.	What is the volatile keyword?
+
+6.	Can we override static methods in Java?
+
+7.	What is the use of Optional in Java 8?
+
+8.	Difference between throw and throws.
+
+9.	What are functional interfaces? Give examples.
+Runnable and callable interface
+10.	Lambda vs Anonymous class?
+Both lambda functions and anonymous inner classes can be used to implement functional interfaces in Java. However, there are significant differences between the two approaches in terms of syntax, verbosity, and behavior.
+
+Calculator subtract = new Calculator() {
+            @Override
+            public int calculate(int a, int b) {
+                return a - b;
+            }
+        };
+
+Calculator subtract = (a, b) -> a - b;
+
+________________________________________
+✅ Spring / Spring Boot:
+1.	What is Dependency Injection and how does Spring implement it?
+Dependency Injection (DI) is a design pattern in which an object or function receives other objects or functions that it requires, known as dependencies, instead of creating them internally. This technique promotes loose coupling between components, making code more modular, testable, and maintainable.
+Spring implements Dependency Injection as a core feature of its Inversion of Control (IoC) container. The Spring IoC container is responsible for managing the lifecycle of objects (known as Spring Beans) and injecting their dependencies.
+Spring provides several ways to achieve DI:
+Constructor Injection: Dependencies are provided through the class constructor. This ensures that all required dependencies are available when an object is instantiated, promoting immutability and preventing NullPointerExceptions.
+ public class MyService {
+        private final MyRepository myRepository;
+        public MyService(MyRepository myRepository) {
+            this.myRepository = myRepository;
+        }
+  }
+Setter Injection: Dependencies are provided through public setter methods. This allows for optional dependencies and can be useful when a default value or no value is acceptable for a dependency.
+  public class MyService {
+        private MyRepository myRepository;
+        public void setMyRepository(MyRepository myRepository) {
+            this.myRepository = myRepository;
+        }
+  }
+Field Injection: Dependencies are injected directly into fields using annotations like @Autowired. While concise, this method can make unit testing more challenging as it bypasses the constructor and setter methods.
+ public class MyService {
+        @Autowired
+        private MyRepository myRepository;
+    }
+
+2.	Difference between @Autowired and constructor injection?
+
+3.	How does Spring manage transactions?
+
+4.	What is the difference between Spring MVC and Spring Boot?
+	Spring MVC is a module specifically for building web applications, while Spring Boot is a broader framework for building and deploying any type of Spring application, often including Spring MVC.
+
+5.	What is @SpringBootApplication composed of?
+
+6.	What is a Bean lifecycle in Spring?
+
+Container Started: The Spring IoC container is initialized.
+Bean Instantiated: The container creates an instance of the bean.
+Dependencies Injected: The container injects the dependencies into the bean.
+Custom init() method: If the bean implements InitializingBean or has a custom initialization method specified via @PostConstruct or init-method.
+Bean is Ready: The bean is now fully initialized and ready to be used.
+Custom utility method: This could be any custom method you have defined in your bean.
+Custom destroy() method: If the bean implements DisposableBean or has a custom destruction method specified via @PreDestroy or destroy-method, it is called when the container is shutting down.
+
+7.	How to externalize configuration in Spring Boot?
+
+8.	How do you handle exceptions globally in Spring Boot (@ControllerAdvice)?
+
+9.	How do you connect to a database using Spring Boot JPA?
+
+10.	Difference between CrudRepository, JpaRepository, and PagingAndSortingRepository.
+Feature	CrudRepository	PagingAndSortingRepository	JpaRepository
+Hierarchy	Top-level interface	Extends CrudRepository	Extends PagingAndSortingRepository
+CRUD Operations	✅ save(), findById(), delete()	✅ Inherited from CrudRepository	✅ Inherited from CrudRepository
+Pagination Support	❌	✅ findAll(Pageable), findAll(Sort)	✅ Inherited from PagingAndSortingRepository
+Sorting Support	❌	✅	✅
+List Return Type	❌ Returns Iterable<T>	✅ Returns Iterable<T>	✅ Returns List<T>
+JPA-Specific Methods	❌	❌	✅ flush(), saveAndFlush(), deleteInBatch()
+When to Use	Only basic CRUD needed	Need sorting and paging in addition to CRUD	Advanced JPA features + full capabilities
+Common Use Case	Simple repositories	API pagination and sorting	Most commonly used in real projects
+Typical Method Additions	Basic CRUD only	Adds findAll(Pageable), findAll(Sort)	Adds flush(), saveAll(), deleteAllInBatch()
+
+________________________________________
+✅ REST API Questions:
+1.	What is REST and what are its principles?
+
+2.	Explain status codes: 200, 201, 204, 400, 401, 403, 404, 500.
+
+2xx Success Codes:
+200 OK: The request was successful, and the server returned the requested data.
+201 Created: The request was successful, and a new resource was created.
+204 No Content: The request was successful, but the server doesn't need to return any data in the response.
+4xx Client Error Codes:
+400 Bad Request: The server could not understand the request due to a client-side error, such as invalid syntax or missing parameters.
+401 Unauthorized: The client must authenticate itself to access the requested resource.
+403 Forbidden: The client is authenticated but does not have permission to access the resource.
+404 Not Found: The requested resource does not exist on the server.
+5xx Server Error Codes: 500 Internal Server Error: The server encountered an unexpected error that prevented it from fulfilling the request.
+3.	Difference between POST, PUT, and PATCH.
+
+4.	What is Idempotency in REST APIs?
+	Idempotency means that making the same request multiple times has the same effect as making it once.
+GET, PUT, DELETE
+
+5.	How do you test REST APIs?
+
+6.	Difference between Monolith and Microservices?
+
+7.	How do you handle versioning in REST APIs?
+	REST API versioning is crucial for managing changes and updates to your API while maintaining backward compatibility for existing clients
+
+Methods of Versioning APIs
+There are different ways in which we can create versions in APIs. Widely used methods are explained below
+
+1. URL Versioning
+In this approach we will add the version number in the URL.
+
+If the normal URL looks like http://localhost:8080/get-books,
+Then it will become http://localhost:8080/v1/get-books and http://localhost:8080/v2/get-books.
+Note: Problem with this approach is that it will clutter the URL and thus this is not good for long term maintainability.
+
+2. Query Parameter Versioning
+Here we will append the query parameter named as Version or any of your choice which is not used any where else. And as a value we will give its version number.
+
+Example:
+Before: http://localhost:8080/get-books
+After: http://localhost:8080/get-books?version=1.0 and http://localhost:8080/get-books?version=2.0
+
+This will keep the main URL but it will add the bottleneck of parameter and thus sometimes it may be less intuitive for clients.
+
+3. Header Versioning
+This method is used when we don't want change the URL any how by now adding version number in URL or by adding query parameter. So thus we will add one Header in Request known as "X-API-Version". So the request will look likes
+GET /get-books HTTP/1.1
+Host: localhost:8080
+Accept: application/json
+X-API-Version: 1
+Here the URL is not tempered but the only problem is that client may require additional effort to manage the version header
+
+8.	What is CORS and how do you handle it?(Cross-Origin Policy)
+
+	Browsers enforce a same-origin policy, which prevents scripts on one origin (e.g., http://example.com) from accessing resources on a different origin (e.g., http://api.example.com).
+
+Handling CORS in APIs:
+1. Identify Allowed Origins:
+Determine which domains should be allowed to access your API.
+2. Configure Server-Side Headers:
+Add the necessary CORS headers to your API responses. Common headers include:
+Access-Control-Allow-Origin: Specifies the allowed origins. You can use a wildcard * to allow all origins (generally not recommended for production), or a specific domain (e.g., Access-Control-Allow-Origin: https://example.com).
+Access-Control-Allow-Methods: Specifies the allowed HTTP methods (e.g., GET, POST, PUT, DELETE).
+Access-Control-Allow-Headers: Specifies the allowed request headers.
+Access-Control-Allow-Credentials: If you need to support cookies or other credentials, set this to true and ensure your server handles credentials
+9.	How do you implement pagination in REST APIs?
+Implementing pagination in a Spring Boot REST API primarily involves leveraging Spring Data JPA's built-in Pageable and Page interfaces.
+1. Repository Interface:
+Ensure your repository interface extends PagingAndSortingRepository or JpaRepository, as these interfaces provide methods that accept Pageable objects.
+Java
+
+public interface UserRepository extends JpaRepository<User, Long> {
+    // Other methods...
+}
+2. Service Layer (Optional but Recommended):
+Create a service layer to encapsulate business logic and interact with the repository.
+Java
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
+@Service
+public class UserService {
+
+    private final UserRepository userRepository;
+
+    public UserService(UserRepository userRepository) {
+        this.userRepository = userRepository;
+    }
+
+    public Page<User> getPaginatedUsers(Pageable pageable) {
+        return userRepository.findAll(pageable);
+    }
+}
+3. REST Controller:
+In your REST controller, accept Pageable as a method parameter. Spring Boot automatically binds query parameters like page, size, and sort to this Pageable object.
+Java
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+public class UserController {
+
+    private final UserService userService;
+
+    public UserController(UserService userService) {
+        this.userService = userService;
+    }
+
+    @GetMapping("/users")
+    public Page<User> getAllUsers(Pageable pageable) {
+        return userService.getPaginatedUsers(pageable);
+    }
+}
+4. Consuming the API:
+You can now call your API with pagination parameters:
+GET /users?page=0&size=10: Retrieves the first page of users with 10 items per page.
+GET /users?page=1&size=5&sort=name,asc: Retrieves the second page of users, 5 items per page, sorted by name in ascending order.
+Explanation:
+Pageable:
+This interface represents pagination information (page number, page size, and sorting). Spring automatically creates an instance from request parameters.
+Page:
+This interface is returned by Spring Data JPA's findAll(Pageable) method. It contains the requested page's content, along with metadata like total pages, total elements, and current page number.
+Query Parameters:
+Spring Boot automatically maps page, size, and sort query parameters to the Pageable object. You can also define default values using annotations like @PageableDefault.
+
+________________________________________
+✅ Microservices:
+1.	How does service discovery work? What is Eureka?
+
+2.	Explain API Gateway (like Zuul, Spring Cloud Gateway).
+
+3.	How do you secure microservices (JWT, OAuth2)?
+
+4.	What is Config Server in Spring Cloud?
+
+5.	What is Hystrix or Resilience4j?
+
+6.	What are distributed logs and how do you trace logs?
+
+7.	How do you deploy microservices?
+
+8.	How to manage database in microservices architecture?
+
+9.	Difference between orchestration and choreography.
+
+________________________________________
+✅ SQL Questions:
+1.	Query to find Nth highest salary.
+SELECT * FROM Employee
+WHERE sal = (
+  SELECT MIN(sal) FROM Employee
+  WHERE sal IN (
+    SELECT DISTINCT sal
+    FROM Employee
+    ORDER BY sal DESC
+    LIMIT 4
+  )
+);
+
+SELECT ename, sal FROM Employee e1
+
+WHERE N-1 = (
+
+  SELECT COUNT(DISTINCT sal) FROM Employee e2
+
+  WHERE e2.sal > e1.sal
+
+);
+2.	Difference between WHERE and HAVING.
+
+3.	What are aggregate functions? Give examples.
+
+4.	Explain types of joins with real examples.
+
+5.	Query to count duplicate entries in a table.
+
+6.	Difference between IN, EXISTS, and JOIN.
+
+7.	Query to get department-wise employee count.
+
+________________________________________
+✅ DSA / Logic Building:
+1.	Find the first non-repeating character in a string.
+
+2.	Reverse a linked list.
+
+3.	Check if a number is Armstrong.
+
+4.	Find the longest substring without repeating characters.
+
+5.	Detect a loop in a linked list.
+
+Lowes:
+
+
+1. ✅ Retry Mechanism
+When message processing fails:
+
+Retry processing in-memory a few times.
+
+If still failing, send to a fallback (retry or dead-letter) topic.
+
+Options:
+Retry Type	Description
+In-memory retry	Use retry logic in the consumer loop or Spring Retry
+Kafka-based retry	Re-publish message to a retry topic with delay
+
+2. ✅ Dead Letter Queue (DLQ)
+A Dead Letter Queue is a special Kafka topic used to store messages that could not be processed even after retries.
+
+DLQ Flow:
+Consume from the main topic.
+
+If message fails after N retries → publish to your-topic.DLQ.
+
+🛠️ Implementing Fallback in Spring Boot (Spring Kafka)
+✅ Basic Retry + DLQ with Spring Kafka
+
+@Bean
+public ConcurrentKafkaListenerContainerFactory<String, String> kafkaListenerContainerFactory() {
+    var factory = new ConcurrentKafkaListenerContainerFactory<String, String>();
+    factory.setConsumerFactory(consumerFactory());
+
+    // Retry Template
+    factory.setRetryTemplate(retryTemplate());
+
+    // DLQ (fallback) handler
+    factory.setRecoveryCallback(context -> {
+        ConsumerRecord<String, String> record = (ConsumerRecord<String, String>) context.getAttribute("record");
+        kafkaTemplate.send("your-topic.DLQ", record.key(), record.value());
+        return null;
+    });
+
+    return factory;
+}
+
+Retry Template Bean:
+
+public RetryTemplate retryTemplate() {
+    RetryTemplate retryTemplate = new RetryTemplate();
+
+    FixedBackOffPolicy backOffPolicy = new FixedBackOffPolicy();
+    backOffPolicy.setBackOffPeriod(1000); // retry delay
+    retryTemplate.setBackOffPolicy(backOffPolicy);
+
+    SimpleRetryPolicy retryPolicy = new SimpleRetryPolicy();
+    retryPolicy.setMaxAttempts(3); // max retries
+    retryTemplate.setRetryPolicy(retryPolicy);
+
+    return retryTemplate;
+}
+3. ✅ Using Kafka ErrorHandler (for advanced control)
+
+@Bean
+public ConcurrentKafkaListenerContainerFactory<String, String> kafkaListenerContainerFactory() {
+    var factory = new ConcurrentKafkaListenerContainerFactory<String, String>();
+    factory.setConsumerFactory(consumerFactory());
+
+    factory.setErrorHandler(new SeekToCurrentErrorHandler(
+        (record, exception) -> {
+            // Custom DLQ publishing logic
+            kafkaTemplate.send("your-topic.DLQ", record.key(), record.value());
+        },
+        3 // number of retries
+    ));
+
+    return factory;
+}
+
+🧪 Observability & Monitoring
+To confirm fallback messages:
+
+Log the failure and DLQ transfer
+
+Monitor DLQ topic using:
+
+Kafka CLI (kafka-console-consumer.sh)
+
+Tools like Prometheus + Grafana
+
+Kafka UI tools (e.g., Kafdrop, Confluent Control Center)
+
+
+2. System.exit(0) does indeed prevent the finally block from running, because it terminates the JVM immediately.
+
+public class TestExit {
+    public static void main(String[] args) {
+        try {
+            System.out.println("In try block");
+            System.exit(0);  // Force JVM shutdown
+        } finally {
+            System.out.println("In finally block");  // This won't execute!
+        }
+    }
+}
+
+3. Ensure kafka messages are consumed
+
+@KafkaListener(topics = "my-topic", containerFactory = "kafkaListenerContainerFactory")
+public void consume(String message, Acknowledgment ack) {
+    try {
+        // process
+        ack.acknowledge(); // manually commit offset
+    } catch (Exception e) {
+        // retry, DLQ, or error handling
+    }
+}
+
+| Method                     | What It Checks                             | Tool                   |
+| -------------------------- | ------------------------------------------ | ---------------------- |
+| `kafka-consumer-groups.sh` | Confirms how many messages were consumed   | Kafka CLI              |
+| `GetOffsetShell`           | Shows earliest/latest offsets              | Kafka CLI              |
+| Log-based check            | See each message consumed                  | Logs or DB             |
+| Monitoring tools           | Live dashboard of topic & consumer metrics | Kafdrop, Grafana, etc. |
+
+
+4. Retry mechanism in Resilience4j
+
+resilience4j.retry:
+  instances:
+    retryExample:
+      max-attempts: 3
+      wait-duration: 1s
+      retry-exceptions:
+        - java.io.IOException
+      ignore-exceptions:
+        - com.example.CustomIgnoreException
+
+
+import io.github.resilience4j.retry.annotation.Retry;
+
+@Service
+public class MyService {
+
+    @Retry(name = "retryExample", fallbackMethod = "fallbackMethod")
+    public String callRemoteService() {
+        // simulate failure
+        throw new IOException("Temporary network issue");
+    }
+
+    public String fallbackMethod(Exception ex) {
+        return "Fallback response due to: " + ex.getMessage();
+    }
+}
+
+
+Feature	Optional.of()	Optional.ofNullable()
+Accepts null values?	❌ No	✅ Yes
+Throws an exception?	✅ Yes (if value is null)	❌ No (returns Optional.empty)
+Use case	Value is guaranteed non-null	Value might be null
+
+	5. Thread States:
+
+Java threads can exist in one of six states, as defined by the java.lang.Thread.State enum:
+NEW:
+A thread that has been created but has not yet been started. The start() method has not been invoked on it.
+
+RUNNABLE:
+A thread that is executing in the Java Virtual Machine. This state encompasses both threads that are currently running on a CPU and threads that are ready to run and waiting for the thread scheduler to allocate CPU time.
+
+BLOCKED:
+A thread that is blocked waiting for a monitor lock. This typically occurs when a thread tries to enter a synchronized block or method but the lock is already held by another thread.
+
+WAITING:
+A thread that is waiting indefinitely for another thread to perform a particular action. This can happen when a thread calls methods like Object.wait(), Thread.join(), or LockSupport.park(). It will remain in this state until explicitly notified by another thread or the joined thread terminates.
+
+TIMED_WAITING:
+A thread that is waiting for another thread to perform an action for a specified waiting time. This occurs when a thread calls methods like Thread.sleep(long millis), Object.wait(long millis), Thread.join(long millis), or LockSupport.parkNanos(long nanos). The thread will transition back to RUNNABLE after the specified time elapses or if it receives a notification.
+
+TERMINATED:
+A thread that has completed its execution and exited. Once a thread enters this state, it cannot be restarted.
+
+5. How do you manage multiple databases in springboot?
+
+To manage multiple databases in Spring Boot, you generally need to configure separate DataSource beans, EntityManagerFactories, and TransactionManagers for each database. Here’s how you can approach it:
+1.	Define Multiple Data Sources
+In your application.properties or application.yml, define separate properties for each database, for example:
+Code
+spring.datasource.primary.url=...
+spring.datasource.primary.username=...
+spring.datasource.primary.password=...
+
+spring.datasource.secondary.url=...
+spring.datasource.secondary.username=...
+spring.datasource.secondary.password=...
+
+2.	Configure DataSource Beans
+In your configuration class, define beans for each DataSource:
+
+@Bean(name = "primaryDataSource")
+@Primary
+@ConfigurationProperties(prefix = "spring.datasource.primary")
+public DataSource primaryDataSource() {
+    return DataSourceBuilder.create().build();
+}
+
+@Bean(name = "secondaryDataSource")
+@ConfigurationProperties(prefix = "spring.datasource.secondary")
+public DataSource secondaryDataSource() {
+    return DataSourceBuilder.create().build();
+}
+3.	Configure EntityManagerFactory and TransactionManager for Each DataSource
+
+@Bean(name = "primaryEntityManagerFactory")
+@Primary
+public LocalContainerEntityManagerFactoryBean primaryEntityManagerFactory(
+        EntityManagerFactoryBuilder builder,
+        @Qualifier("primaryDataSource") DataSource dataSource) {
+    return builder
+            .dataSource(dataSource)
+            .packages("com.example.primary") // package with primary entities
+            .persistenceUnit("primary")
+            .build();
+}
+// Repeat similarly for secondary
+
+4.	Repository Configuration
+Use @EnableJpaRepositories on configuration classes to specify which repositories use which EntityManager:
+@EnableJpaRepositories(
+    basePackages = "com.example.primary.repo",
+    entityManagerFactoryRef = "primaryEntityManagerFactory",
+    transactionManagerRef = "primaryTransactionManager"
+)
+5.	Usage
+Inject the correct repository where needed. Spring will route queries to the appropriate database.
+
+
+
+1. Can FunctionalInterface extend another class/interface?
+a.	A @FunctionalInterface can extend another interface — as long as it does not introduce more than one abstract method (excluding default/static methods).
+b.	It cannot extend a class (because Java interfaces can't extend classes)
+
+2.What is the output of the following Java code snippet?
+
+String s = "Praveen";
+s.append("k"); - this method is not available
+sout(s);
+=> compile time error
+
+3. String[] arr={"apple", "banaba", "guava","mango"};
+        String str = "banana";
+
+Find the most equal word in the string
+
+import java.util.*;
+
+class Main {
+    public static void main(String[] args) {
+        String[] arr = {"apple", "banaba", "guava", "mango"};
+        String str = "banana";
+
+        String closestWord = "";
+        int minDistance = Integer.MAX_VALUE;
+
+        for (String word : arr) {
+            int m = word.length();
+            int n = str.length();
+            int[][] dp = new int[m + 1][n + 1];
+
+            for (int i = 0; i <= m; i++) dp[i][0] = i;
+            for (int j = 0; j <= n; j++) dp[0][j] = j;
+
+            for (int i = 1; i <= m; i++) {
+                for (int j = 1; j <= n; j++) {
+                    if (word.charAt(i - 1) == str.charAt(j - 1)) {
+                        dp[i][j] = dp[i - 1][j - 1];
+                    } else {
+                        dp[i][j] = 1 + Math.min(
+                            dp[i - 1][j - 1],
+                            Math.min(dp[i - 1][j], dp[i][j - 1])
+                        );
+                    }
+                }
+            }
+
+            int distance = dp[m][n];
+            if (distance < minDistance) {
+                minDistance = distance;
+                closestWord = word;
+            }
+        }
+
+        System.out.println("Most similar word to '" + str + "' is: " + closestWord);
+    }
+}
+
+4. 	The ClassPath is a parameter in the Java Virtual Machine(JVM) or the Java compiler that is used by a system or application ClassLoader to locate and load compiled Java bytecodes stored in the ".class" file
+
+	Path: An environment variable is used by the operating system to find the executable files.
+
+5. Can we use HashMap in multithreaded environment
+
+We might notice unexpected behavior. Instead of having 2000 accounts with a total balance of $20,000, we may encounter data loss due to Race conditions. This occurs when multiple threads attempt to modify the HashMap concurrently, leading to unpredictable results and potential loss of data. We may need to concurrentHashMap
+
+
+6. clear comparison between ExecutorService and CompletableFuture in a Spring Boot context, with working examples and explanations.
+
+✅ 1. ExecutorService Example (Traditional Thread Pool)
+
+@Service
+public class ReportService {
+
+    private final ExecutorService executorService = Executors.newFixedThreadPool(5);
+
+    public void generateReport() {
+        executorService.submit(() -> {
+            // Simulate long task
+            try {
+                Thread.sleep(3000);
+                System.out.println("Report generated by " + Thread.currentThread().getName());
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        });
+    }
+
+    @PreDestroy
+    public void shutdown() {
+        executorService.shutdown();
+    }
+}
+✅ Usage:
+
+@RestController
+@RequestMapping("/report")
+public class ReportController {
+
+    @Autowired
+    private ReportService reportService;
+
+    @GetMapping
+    public String generate() {
+        reportService.generateReport();
+        return "Report generation started";
+    }
+}
+
+✅ 2. CompletableFuture Example (Modern Async with Return Values)
+✅ Service:
+
+@Service
+public class ReportService {
+
+    @Async
+    public CompletableFuture<String> generateReportAsync() {
+        try {
+            Thread.sleep(3000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+        return CompletableFuture.completedFuture("Report generated at " + LocalDateTime.now());
+    }
+}
+📝 Ensure @EnableAsync is added in a config or main class.
+
+✅ Controller:
+
+@RestController
+@RequestMapping("/report")
+public class ReportController {
+
+    @Autowired
+    private ReportService reportService;
+
+    @GetMapping("/async")
+    public CompletableFuture<ResponseEntity<String>> generateAsync() {
+        return reportService.generateReportAsync()
+                .thenApply(ResponseEntity::ok);
+    }
+}
+✅ Add @EnableAsync in your @SpringBootApplication:
+
+@SpringBootApplication
+@EnableAsync
+public class DemoApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(DemoApplication.class, args);
+    }
+}
+
+🔍 Difference Summary
+Feature			ExecutorService	CompletableFuture
+Style				Imperative		Functional/Reactive
+Return type			Future<T>		CompletableFuture<T>
+Integration in Spring		Manual ThreadPool	Native Spring support via @Async
+Error handling	Manual	Built-in 		chaining (exceptionally)
+Chaining tasks		Tedious		Very fluent (thenApply, thenCompose)
+
+✅ When to Use
+Use ExecutorService if:
+
+You want low-level control over threads.
+You need to manage a shared thread pool.
+
+Use CompletableFuture if:
+
+You prefer cleaner async chaining and error handling.
+You want modern async capabilities (non-blocking).
+You use Spring's @Async.
+
+6. I want you to make this employee class an immutable class. The logic?
+	public final class Employee {
+    private final int id;
+    private final String name;
+    private final String department;
+
+    public Employee(int id, String name, String department) {
+        this.id = id;
+        this.name = name;
+        this.department = department;
+    }
+
+    // Getters only, no setters
+    public int getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getDepartment() {
+        return department;
+    }
+}
+
+7. What will be the output of the following code?
+
+public class UpdateHashSet
+{
+public static void main(String[] args) {
+HashSet<Student> studentList = new HashSet<>();
+Student st1 = new Student("Nimit", 1);
+Student st2 = new Student("Rahul", 3);
+Student st3 = new Student("Nimit",2);
+studentList.add(st1);
+studentList.add(st2);
+studentList.add(st3);
+System.out.println(studentList.size());
+st1.id = 3;
+System.out.println(studentList.size());
+}
+}
+
+8. How many ways can we create an object in Java?
+	With new keyword;
+with clone() method;
+with instanceOf() method;
+	With Dependency Injection;
+
+9. Given the input string 'APZzYGRb', write logic to replace each letter with the next letter in the alphabet, maintaining the case. For example, 'A' becomes 'B', 'P' becomes 'Q', 'Z' becomes 'A', 'z' becomes 'a', etc. Output for input 'APZzYGRb' should be 'BQAaZHSc'.
+	if(c>=’A’ && c>=’Z’) output.append(c==’Z’?’A’:c+1)
+10. Explain custom Array list
+		public class CustomArrayList {
+    private int[] data;
+    private int size;
+    private int capacity;
+
+    public CustomArrayList() {
+        this.capacity = 10;
+        this.data = new int[capacity];
+        this.size = 0;
+    }
+
+    public void add(int value) {
+        if (size == capacity) {
+            capacity += 10;
+            int[] newData = new int[capacity];
+            System.arraycopy(data, 0, newData, 0, size);
+            data = newData;
+        }
+        data[size++] = value;
+    }
+    public int size() {
+        return size;
+    }
+}
+	11. //List<String> = "ram","gopal",null,null,"shyam",null
+//null,null,null,gopal,ram,shyam
+	import java.util.*;
+
+class Main {
+    public static void main(String[] args) {
+        //System.out.println("Try programiz.pro");
+
+        List<String> str=new ArrayList<>(Arrays.asList("ram","gopal",null,null,"shyam",null));
+        str.sort(Comparator.nullsFirst(String::compareTo));
+        System.out.println(str);
+    }
+}
+12.
+| Annotation        | Direction       	| Purpose                                                  		|
+| -----------------—-| ------------------------ | ------------------------------------------------------------------- |
+| `@RequestBody`   | HTTP ➡ Java | Converts request JSON → Java object                     |
+| `@ResponseBody`| Java ➡ HTTP  | Converts Java object → JSON/XML response                 |
+| `@RestController` | Both directions | Combines `@Controller` + `@ResponseBody` for all methods |
+
+
+Wipro:
+
+1.	What is service discovery choreography and orchestration?
+1. Choreography
+🔹 What it is:
+In Choreography, there is no central coordinator. Services react to events (usually via messaging or Kafka).
+Each service listens to and emits events — similar to a dance, where everyone knows their steps.
+
+🔹 Features:
+Decentralized
+Easy to scale
+Harder to debug/troubleshoot
+
+🔹 Example (Order Process):
+OrderService emits OrderCreated
+PaymentService listens and processes payment
+
+ShippingService listens and ships when PaymentSuccessful is received
+
+→ OrderCreated →
+        PaymentService
+→ PaymentSuccessful →
+        ShippingService
+
+🕹️ 3. Orchestration
+🔹 What it is:
+A central coordinator (orchestrator) tells each microservice what to do and in what order.
+This is like a conductor in an orchestra.
+
+🔹 Features:
+Centralized control
+Easier to handle retries/failures
+Less autonomy for services
+
+🔹 Example (Order Process):
+OrchestratorService calls:
+OrderService
+then PaymentService
+then ShippingService
+
+If any fails, orchestrator rolls back or compensates
+
+public void handleOrder() {
+    callOrderService();
+    callPaymentService();
+    callShippingService();
+}
+
+Feature	Choreography			Orchestration
+Control		Distributed (event-driven)	Centralized (command-driven)
+Flexibility	High (services autonomous)	Medium (central logic)
+Complexity	Hidden in flow			Explicit in orchestrator
+Debugging	Hard (no single flow)		Easier (central visibility)
+Scaling	Easy				Medium
+Tools		Kafka, RabbitMQ		Camunda, Netflix Conductor, custom code
+2.	aabbcccA Output -a-2,b-2,c-3,A-1 using streams
+import java.util.*;
+import java.util.stream.*;
+
+public class Main {
+    public static void main(String[] args) {
+        String input = "aabbcccA";
+
+        // Use LinkedHashMap to preserve insertion order
+        Map<Character, Long> freqMap = input.chars()
+            .mapToObj(c -> (char) c)
+            .collect(Collectors.groupingBy(
+                c ->c, LinkedHashMap::new,Collectors.counting()
+            ));
+
+        // Convert to desired format
+        String result = freqMap.entrySet().stream()
+            .map(entry -> entry.getKey() + "-" + entry.getValue())
+            .collect(Collectors.joining(","));
+
+        System.out.println(result);  // Output: a-2,b-2,c-3,A-1
+    }
+}
+
+3.	1,3,5,7 -> 2,4,6,8,9 - using streams
+		import java.util.*;
+public class Main {
+    public static void main(String[] args) {
+        List<Integer> exclude = Arrays.asList(1, 3, 5, 7);
+
+        for (int i = 1; i <= 10; i++) {
+            if (!exclude.contains(i)) {
+                System.out.print(i + " ");
+            }
+        }
+    }
+}
+
+import java.util.*;
+import java.util.stream.*;
+
+public class Main {
+    public static void main(String[] args) {
+        List<Integer> exclude = Arrays.asList(1, 3, 5, 7);
+
+        IntStream.rangeClosed(1, 10)
+            .filter(n -> !exclude.contains(n))
+            .forEach(n -> System.out.print(n + " "));
+    }
+}
+
+4.	 Write global exception code
+
+@ControllerAdvice
+public static GlobalExecptionHandler{
+@ExceptionHandler(invalidAgeException.class)
+public ResponseEntity<String> exc(String ex){
+	return ResponseEntity<>(ex.message,HttpStatus.BAD_Request);
+}
+}
+
+
+public class invalidAgeException extends RuntimeException{
+ public invalidAgeExcception(String message){
+	Super(message);
+}
+
+}
+5.	 Microservice architecture
+6.	Thread1: 1  , Thread 2: 2 , Thread 3: 3 , Thread 1:10  using threads
+
+public class ThreadSequence {
+    public static void main(String[] args) throws InterruptedException {
+
+        // Thread1 prints 1
+        Thread t1 = new Thread(() -> {
+            System.out.println(Thread.currentThread().getName() + ": 1");
+        }, "Thread1");
+
+        // Thread2 prints 2
+        Thread t2 = new Thread(() -> {
+            System.out.println(Thread.currentThread().getName() + ": 2");
+        }, "Thread2");
+
+        // Thread3 prints 3
+        Thread t3 = new Thread(() -> {
+            System.out.println(Thread.currentThread().getName() + ": 3");
+        }, "Thread3");
+
+        // Start threads in sequence
+        t1.start();
+        t1.join();
+
+        t2.start();
+        t2.join();
+
+        t3.start();
+        t3.join();
+
+        // Thread1 again prints 10 (new thread with same name)
+        Thread t4 = new Thread(() -> {
+            System.out.println(Thread.currentThread().getName() + ": 10");
+        }, "Thread1");
+
+        t4.start();
+    }
+}
+
+7.	Stream api internal working
+
+1.	What is map and Flatmap?
+
+map():
+Purpose: Transforms each element of the stream into another form.
+Returns: A Stream of transformed elements.
+
+✅ Use when:
+You want to apply a function to each element and keep the structure of the stream (1 input → 1 output).
+
+🔧 Example:
+
+List<String> names = Arrays.asList("john", "jane");
+List<String> upperNames = names.stream()
+    .map(String::toUpperCase)
+    .collect(Collectors.toList());
+System.out.println(upperNames); // [JOHN, JANE]
+
+
+🔹 flatMap():
+Purpose: Flattens nested structures after transformation.
+Returns: A flat Stream by merging multiple inner streams into one.
+
+✅ Use when:
+Each element is mapped to multiple values (e.g., lists or arrays) and you want a single stream of all values (1 input → many outputs).
+
+🔧 Example:
+
+List<String> words = Arrays.asList("hello", "world");
+List<String> chars = words.stream()
+    .flatMap(word -> Arrays.stream(word.split("")))
+    .collect(Collectors.toList());
+
+System.out.println(chars); // [h, e, l, l, o, w, o, r, l, d]
+
+🔁 Summary Table:
+Operation	Input → Output			Used For
+map()		T → R					One-to-one transformation
+flatMap()	T → Stream<R> → flatten		One-to-many transformation + flattening
+
+
+2.	Convert a given integer list to the sorted order and should have only even numbers?
+
+	public class Solution{
+public static void main(String[] args){
+  List<Integer> num= Arrays.asList(1,3,54,5,6);
+  System.out.println(getEvenNum(num));
+}
+
+public static List<Integer> getEvenNum(List<Integer> numbers){
+  return numbers.stream()
+  .filter(i->i%2==0)
+  .sorted(Comparator.reverseOrder())
+  .collect(Collectors.toList());
+}
+}
+ 	Remember Collections.sort(forList) and Arrays.sort(forArrays)
+
+3.	Prime number calculation
+
+public class number{
+public static void main(String[] args){
+	int n=5; boolean isPrime=false;
+	for(int i=2;i<=Math.sqrt(n);i++){
+
+	if(n%i!=0){
+		isPrime=true;
+	}
+}
+System.out.prinnt(isPrime);
+}
+
+L2:
+1. What is array and linkedlist
+	Feature		Array		Linked List
+Memory		Contiguous	Non-contiguous
+Size			Fixed		Dynamic
+Access by Index	Fast (O(1))	Slow (O(n))
+Insertion/Deletion	Slow (O(n))	Fast (O(1))
+
+In short:
+Array: Fast access, fixed size, contiguous memory.
+Linked List: Dynamic size, slow access, fast insert/delete, non-contiguous memory.
+
+2. What is queue and time complexity
+	A queue is a linear data structure that follows the First-In-First-Out (FIFO) principle.
+
+First-In-First-Out (FIFO): The first element added is the first one to be removed.
+Common Operations:
+enqueue: Add an element to the back of the queue.
+dequeue: Remove an element from the front of the queue.
+peek/front: View the front element without removing it.
+
+Queue<Integer> q = new LinkedList<>();
+q.add(1);   // enqueue
+q.add(2);
+int first = q.remove(); // dequeue, first = 1
+
+3. Why do we have both interface and abstract classes in java
+	Interface
+Purpose: Specifies a contract that implementing classes must follow.
+Features:
+Only declares methods (until Java 8, now can have default/static methods).
+Cannot have instance variables (except static final constants).
+A class can implement multiple interfaces (multiple inheritance of type).
+Use case:
+When you want to define a capability or behavior that can be shared across unrelated classes (e.g., Runnable, Comparable).
+
+Abstract Class
+Purpose: Provides a partial implementation for subclasses.
+Features:
+Can have method implementations (concrete methods) and abstract methods.
+Can have member variables and constructors.
+Supports single inheritance only (a class can extend one abstract class).
+Use case:
+When you want to share code among closely related classes (e.g., a common base class with shared logic).
+
+Why Both?
+Flexibility:
+Interfaces allow you to define "what" a class can do, while abstract classes let you define "how" it does it.
+
+Multiple Inheritance:
+Java does not support multiple inheritance for classes but does for interfaces. Interfaces allow a class to inherit behaviors from multiple sources.
+
+Feature		Interface		Abstract Class
+Methods		Abstract, default	Abstract, concrete
+Variables		Static final		Instance, static
+Constructors		No			Yes
+Multiple inheritance	Yes			No
+Use case		Capability/Contract	Partial implementation
+
+4. Collection framework experiences
+5. Why are you using Map to your left and Hashmap to your right?
+	In Java it is because of polymorphism and best practices in object-oriented programming.
+1. Map is an Interface
+Map is a Java interface that defines the contract for a key-value collection.
+It does not provide implementation—just method signatures.
+2. HashMap is a Class
+HashMap is a concrete class that implements the Map interface.
+It provides the actual code for storing and managing key-value pairs.
+3. Programming to an Interface
+By declaring the variable as a Map, you make your code more flexible.
+You can later switch the implementation to another class (like TreeMap, LinkedHashMap, etc.) without changing the code that uses map.
+This is called "programming to an interface, not an implementation."
+
+6. If we put a duplicate key to hashmap what error will it throw?
+	No, error will be shown
+
+	Map<String, Integer> map = new HashMap<>();
+map.put("A", 1); // Adds key "A" with value 1
+map.put("A", 2); // Overwrites value for key "A" with 2
+
+System.out.println(map.get("A")); // Prints 2
+
+7. Difference between Waterfall and Agile?
+
+
+Waterfall	Agile
+Sequential, linear process	Iterative, incremental process
+Requirements fixed at the start	Requirements evolve during project
+Rigid structure; phases don’t overlap	Flexible; phases can overlap
+Customer involved mainly at milestones	Customer involved throughout
+Testing at end of development	Continuous testing and integration
+Delivery at project completion	Frequent delivery (every sprint)
+Changes are difficult and costly	Changes are easy to accommodate
+Heavy documentation	Sufficient, but lighter documentation
+Best for well-defined projects	Best for dynamic/changing projects
+
+	8. Explain CICD deployment process here
+
+Here is a step-by-step explanation of how you can use GitHub Actions for CI/CD to deploy a Spring Boot application and update changes:
+
+1.	Create a workflow file in your repository in the .github/workflows directory, such as .github/workflows/deploy.yml.
+2.	Define triggers for the workflow, like on: push to the main branch, so the workflow runs whenever you push code changes.
+3.	The workflow checks out your latest code using the actions/checkout action.
+4.	It sets up the Java environment using the actions/setup-java action and specifies the Java version your Spring Boot app requires.
+5.	The workflow builds your Spring Boot application, usually using Maven or Gradle commands such as mvn clean package or ./gradlew build.
+6.	You can add steps to run tests to ensure your code is working correctly before deployment.
+7.	After a successful build and test, the workflow deploys the new artifact (for example, a JAR file) to your server, cloud provider, or container registry. This can be done using SSH commands, Docker actions, or cloud-specific actions.
+8.	You store sensitive information like server credentials or API tokens in GitHub Secrets, and the workflow accesses them securely.
+9.	Each time you push new code, GitHub Actions automatically rebuilds, tests, and redeploys your application, updating it with the latest changes.
+
+name: CICD
+
+on:
+  push:
+    branches: [deploy-to-ec2]
+
+jobs:
+  build:
+    runs-on: [ubuntu-latest]
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v3
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+      - name: Build Project
+        run: mvn clean install -DskipTests
+      - name: Login to docker hub
+        run: docker login -u ${{secrets.DOCKER_USERNAME}} -p ${{secrets.DOCKER_PASSWORD}}
+      - name: Build docker image
+        run: docker build -t integrationninjas/springboot-example .
+      - name: Publish image to docker hub
+        run: docker push integrationninjas/springboot-example:latest
+
+  deploy:
+    needs: build
+    runs-on: [aws-ec2]
+    steps:
+      - name: Pull Image from docker hub
+        run: docker pull integrationninjas/springboot-example:latest
+      - name: Delete old container
+        run: docker rm -f springboot-example-container
+      - name: Run docker container
+        run: docker run -d -p 8080:8080 --name springboot-example-container integrationninjas/springboot-example
+
+L3
+
+	1. How do you handle REST API's in Spring Boot.
+| Concept                             | Explanation                                                   |
+| ----------------------------------- | ------------------------------------------------------------- |
+| `@RestController`                   | Combines `@Controller` + `@ResponseBody`. Used for REST APIs. |
+| `@RequestMapping`                   | Maps HTTP requests to handler methods.                        |
+| `@GetMapping`, `@PostMapping`, etc. | Specialized annotations for HTTP verbs.                       |
+| `@PathVariable`                     | Binds a URI template variable to a method parameter.          |
+| `@RequestBody`                      | Maps the body of a request to a method parameter.             |
+| `ResponseEntity`                    | Represents HTTP responses with status and body.               |
+
+2. What are marker interfaces?
+A marker interface is an interface with no methods or fields. It is used to mark or tag a class so that Java or frameworks can treat it differently at runtime or compile time.
+| Interface                | Purpose                                                          |
+| ------------------------ | ---------------------------------------------------------------- |
+| `java.io.Serializable`   | Marks that a class can be serialized                             |
+| `java.lang.Cloneable`    | Marks that `Object.clone()` is allowed                           |
+| `java.util.RandomAccess` | Used by List implementations to indicate efficient random access |
+| `java.rmi.Remote`        | Marks that an object can be used remotely                        |
+
+
+3. Explain how exception handling works in Spring Boot.
+
+4. What is the Singleton design pattern?
+public class Singleton {
+    private static Singleton instance;
+
+    private Singleton() {}
+
+    public static Singleton getInstance() {
+        if (instance == null) {
+            synchronized (Singleton.class) {
+                if (instance == null) { // double-checked locking
+                    instance = new Singleton();
+                }
+            }
+        }
+        return instance;
+    }
+}
+
+
+5. What is the difference between @Service, @Component and @Repository.
+
+6. How does garbage collection work in Java?
+Garbage Collection (GC) in Java is the automatic process of identifying and removing unused objects from memory (heap) to free up resources and prevent memory leaks.
+Reachability analysis: JVM checks which objects are still accessible.
+Unreachable objects: Marked for collection.
+Garbage collector runs: Frees memory occupied by unreachable objects.
+Finalization (optional): finalize() method (now deprecated) can run before object removal.
+
+7. What are the differences between monolithic and microservices architecture?
+
+8. What are method references in Java 8?
+Method References in Java 8 are a shorthand, concise way to call a method by referring to it directly instead of using a lambda expression
+| Type                                                     | Syntax                      | Example               |
+| -------------------------------------------------------- | --------------------------- | --------------------- |
+| 1. **Static Method**                                     | `ClassName::staticMethod`   | `Math::max`           |
+| 2. **Instance Method of a Particular Object**            | `object::instanceMethod`    | `System.out::println` |
+| 3. **Instance Method of an Arbitrary Object of a Class** | `ClassName::instanceMethod` | `String::toLowerCase` |
+| 4. **Constructor Reference**                             | `ClassName::new`            | `ArrayList::new`      |
+
+public class Utils {
+    public static void print(String msg) {
+        System.out.println(msg);
+    }
+}
+
+// Usage
+List<String> list = Arrays.asList("A", "B", "C");
+list.forEach(Utils::print);  // Instead of: list.forEach(x -> Utils.print(x));
+
+
+9. Explain all the keywords in a simple java program.
+public class HelloWorld {
+    public static void main(String[] args) {
+        System.out.println("Hello, World!");
+    }
+}
+
+public is an access modifier that makes the class and method accessible from anywhere in the application.
+
+class is used to declare a class named HelloWorld.
+
+HelloWorld is the user-defined name of the class and should match the filename.
+
+Curly braces {} define the start and end of a block of code, which in this case wraps the class and the main method.
+
+static is a modifier that means the method belongs to the class rather than an instance, allowing it to be run without creating an object of the class.
+
+void is the return type, indicating that the main method does not return any value.
+
+main is the special method that serves as the entry point of the program where execution begins.
+
+String[] args is the parameter to the main method, used to accept command-line arguments as an array of String values.
+
+System is a built-in Java class from the java.lang package that provides access to system-related resources.
+
+out is a static field of the System class that represents the standard output stream (typically the console).
+
+println() is a method of PrintStream (the type of System.out) that prints a line of text to the console, followed by a newline.
+
+"Hello, World!" is a string literal — the actual message being printed to the console.
+
+
+
+
+10. Explain the internal working of a hashmap
+
+11. What happens in case of a collision in HashMap
+A collision in a HashMap occurs when two keys generate the same hash code, and therefore they are placed in the same bucket (index of the internal array).
+
+Java HashMap handles this using a combination of linked lists and red-black trees (from Java 8 onward).
+int index = hash % array.length; get the value
+
+12. How to decide which collection should be used.
+| Collection Type | Use When...                                     | Allows Duplicates?  | Ordering  | Access by Key? |
+| --------------- | ----------------------------------------------- | ------------------- | --------- | -------------- |
+| **List**        | You want **ordered collection with duplicates** | Yes                 | Yes       | No             |
+| **Set**         | You want **unique elements only**               | No                  | Depends\* | No             |
+| **Map**         | You want **key-value pairs**                    | Keys no, values yes | Depends\* | Yes            |
+
+
+13. What are some problems that might arise while you write junits. What are the steps we can do to avoid it.
+Tests Are Not Independent, Hardcoding Data, Mocking too many things or mocking nothing when needed.
+We need to leverage before each after each to create or remove the unused things.
+We need to user proper inject mocks rather than play with real inputs
+Tests become either fragile or ineffective.
+
+14. What is dependency injection?
+
+15. Write spring boot post mapping code
+@Data                   // Generates getters, setters, toString, equals, hashCode
+@NoArgsConstructor      // Generates a no-arg constructor
+@AllArgsConstructor     // Generates a constructor with all fields
+public class Employee {
+    private Long id;
+    private String name;
+    private String department;
+}
+
+@RestController
+@RequestMapping("/api/employees")
+public class EmployeeController {
+
+    private List<Employee> employeeList = new ArrayList<>();
+
+    @PostMapping
+    public ResponseEntity<Employee> createEmployee(@RequestBody Employee employee) {
+        employee.setId((long) (employeeList.size() + 1));
+        employeeList.add(employee);
+        return new ResponseEntity<>(employee, HttpStatus.CREATED);
+    }
+}
+
+
+16. Difference between @Controller and @RestController
+
+17. What is Ioc container
+
+18. multiples of 3, print 'Fizz', for 5 print 'Buzz', for both print "Bizcuze Also, add a rule for Jazz
+	public class FizzBuzzJazz {
+    public static void main(String[] args) {
+        for (int i = 1; i <= 100; i++) {
+            StringBuilder result = new StringBuilder();
+
+            if (i % 3 == 0 && i % 5 == 0) {
+                result.append("Bizcuze");
+            } else if (i % 3 == 0) {
+                result.append("Fizz");
+            } else if (i % 5 == 0) {
+                result.append("Buzz");
+            }
+
+            if (i % 7 == 0) {
+                if (result.length() > 0) result.append(" ");
+                result.append("Jazz");
+            }
+
+            if (result.length() == 0) {
+                System.out.println(i);
+            } else {
+                System.out.println(result);
+            }
+        }
+    }
+}
+
+
+19. input javapythongo output: ["Java", "Python", "go"]
+import java.util.*;
+
+public class WordSplit {
+    public static void main(String[] args) {
+        String input = "javapythongo";
+        List<String> output = new ArrayList<>();
+
+        if (input.contains("java")) {
+            output.add("Java");
+        }
+
+        if (input.contains("python")) {
+            output.add("Python");
+        }
+
+        if (input.contains("go")) {
+            output.add("go");
+        }
+
+        System.out.println(output);
+    }
+}
+
+20. input: aaabbbcccaaa Output: a3b3c3a3
+
+public class CompressString {
+    public static void main(String[] args) {
+        String input = "aaabbbcccaaa";
+        StringBuilder output = new StringBuilder();
+
+        int count = 1;
+        for (int i = 1; i < input.length(); i++) {
+            if (input.charAt(i) == input.charAt(i - 1)) {
+                count++;
+            } else {
+                output.append(input.charAt(i - 1)).append(count);
+                count = 1;
+            }
+        }
+
+        // Append the last character and its count
+        output.append(input.charAt(input.length() - 1)).append(count);
+        System.out.println(output.toString());
+    }
+}
+
+
+21. What is the output of this code
+
+ int[] arr = {1, 2, 3, 4, 5};
+
+ int sum = 0;
+
+ for (int i = 0; i <= arr.length; i++) {
+
+ 	sum += arr[i];
+
+ }
+
+System.out.println(sum); -> 30/2=15
+
+22. Explain HelloWorld program in java line by line
+
+23. How to create a global exception in spring boot
+
+24. let say u have a emp table now can u write a Sql query to find the amp details whose salary is 5th highest
+Select user from users where 1=(select dcount(distinct sal) from users e where users.sal>e.sal)
+With Nysql->
+SELECT *
+FROM emp
+WHERE salary = (
+    SELECT DISTINCT salary
+    FROM emp
+    ORDER BY salary DESC
+    LIMIT 1 OFFSET 4
+);
+OFFSET 4 skips the top 4 salaries → the 5th one is returned.
+With mssql->Select * from emp e where 4= (select count(distinct sal) from emp e2 where e2.sal>e.sal)
+
+
+25. let say there is a Table Person with two columns i.e., name and car. Now Find the top 5 care
+	SELECT car, COUNT(*) AS car_count
+FROM Person
+GROUP BY car
+ORDER BY car_count DESC
+LIMIT 5;
+
+26. Find frequency of each char in a string
+
+27. Find if the string is valid or invalid.
+
+String s = "{()[()}"
+
+return valid if each opening bracket has closing bracket otherwise invalid
+
+import java.util.Stack;
+
+public class BracketValidator {
+
+    public static String isValid(String s) {
+        Stack<Character> stack = new Stack<>();
+
+        for (char ch : s.toCharArray()) {
+            if (ch == '(' || ch == '{' || ch == '[') {
+                stack.push(ch);
+            } else {
+                if (stack.isEmpty()) return "invalid";
+
+                char top = stack.pop();
+
+                if (!isMatchingPair(top, ch)) {
+                    return "invalid";
+                }
+            }
+        }
+
+        return stack.isEmpty() ? "valid" : "invalid";
+    }
+
+    private static boolean isMatchingPair(char open, char close) {
+        return (open == '(' && close == ')') ||
+               (open == '{' && close == '}') ||
+               (open == '[' && close == ']');
+    }
+
+    public static void main(String[] args) {
+        String s = "{()[()]}";
+        System.out.println(isValid(s));  // Output: valid
+
+        String s2 = "{()[()}";
+        System.out.println(isValid(s2)); // Output: invalid
+    }
+}
+
+
+28. What is Singleton design pattern
+
+29. How to apply singleton design pattern in spring boot
+| Scenario                                           | How to get Singleton                                           |
+| -------------------------------------------------- | -------------------------------------------------------------- |
+| Spring Boot bean (default)                         | Just declare `@Component` or `@Service` → Singleton by default |
+| Explicit configuration                             | Use `@Bean` methods in `@Configuration` class                  |
+| Classic Java Singleton (not recommended in Spring) | Implement private constructor + static instance + getter       |
+
+30. Provide the output
+	class A {
+    Public A() {
+        System.out.println("from a");
+    }
+}
+
+class B extends A {
+    public B() {
+        System.out.println("from b");
+    }
+}
+
+class C extends B {
+    public C() {
+        System.out.println("from c");
+    }
+}
+
+public class Main {
+    public static void main(String[] args) {
+        new A(); // prints "from a"
+        new B(); // prints "from a" then "from b"
+        new C(); // prints "from a", then "from b", then "from c"
+    }
+}
+here , super() is called while extending every class so extending class can run constructor first.
+
+31. Create a structure for UserData, Address class and write service layer logic
+
+public class UserData {
+    private long phoneNumber;
+    private String firstName;
+    private String lastName;
+    private int userId;
+    private Address address; // relation to Address
+}
+
+public class Address {
+    private String street;
+    private String city;
+    private String zipCode;
+}
+public class UserService {
+    public UserPhone getPhoneNumber() {
+        UserData user = new UserData();
+        user.setPhoneNumber(9876543210L);
+        user.setFirstName("John");
+        user.setLastName("Doe");
+        user.setUserId(1);
+        return user;
+    }
+}
+
+public class UserController {
+
+    @Autowired
+    private UserService service;
+
+    @GetMapping("/phone")
+    public ResponseEntity<UserPhone> getPhoneNumber() {
+        UserPhone user = service.getPhoneNumber();
+        return ResponseEntity.ok(user);
+    }
+}
+
+Or
+
+public class UserData{
+	Long phoneNumber;
+	String firstName;
+	String lastName;
+	Address address;
+}
+
+public class Address{
+	int zipcode;
+	String firstAddress;
+}
+
+public class UserService{
+
+	public UserData getUserByPhone(Long phone){
+		UserData user= UserRepo.getUserByPhone(phone);
+		if(user==null)
+			throw new userNotFoundExecption("Not found");
+		return user;
+					or
+				return Optional.ofNullable(UserRepo.getUserByPhone(phone))
+                   			.orElseThrow(() -> new UserNotFoundException("User not found"));
+	}
+}
+
+public class UserController{
+	public ResponseEntity<UserData> getUserData(@ReqParam Phone phone){
+	UserData userdata=UserService.getUserByPhone(phone);
+	return ResponseEntity<>(userdata,HttpStatus.OK);
+}
+
+}
+
+
+	What will be the size of the redis cache?
+		By default, on 64-bit systems, Redis will use all available system memory until the server runs out of RAM,
+default maxmemory set to a percentage of the available memory (e.g., 80%) for their managed Redis instances in cloud
+What happens if the cache is full?
+	If Redis reaches the specified maxmemory, it will evict keys based on the configured eviction policy
+How many events may you send in kafka a day?
+There is no fixed upper limit to the number of events you can send in Apache Kafka per day. Kafka is designed for high throughput and horizontal scalability, so the maximum number of events depends primarily on your cluster's hardware resources, cluster configuration, topic/partition setup, network, and broker quotas
+What is the max size limit and even what we can send?
+	The default maximum size for a single Kafka message is 1MB
+	Write a Java program to segregate all 0s and 1s in an array so that all 0s come first and then all 1s.
+		public static void main(String[] args){
+       int[] a={1,0,1,0,0,0,0,1,1};
+       int left=0; int right=a.length-1;
+
+       while(left<right){
+         while(a[left]==0 && left<right)
+          {
+            left++;
+          }
+           while(a[right]==1 && left<right)
+          {
+            right--;
+          }
+          if(left<right){
+            int temp= a[left];
+            a[left]=a[right];
+            a[right]=temp;
+            left++;
+            right--;
+          }
+       }
+       Arrays.stream(a).forEach(System.out::print)
+    }
+Build a stack with the queues?
+Approach:
+
+Use two queues, q1 and q2.
+
+For push -> enqueue into the empty queue and move all elements from the other queue into this
+
+For pop - > dequeue from the non-empty q1.
+LTIMindtree:
+
+1.	Can you provide specific examples of how you used your expertise in Spring Boot microservices and SQL query optimization to enhance server load times and data retrieval efficiency in your roles?
+
+a.	The system faced latency issues during peak load due to synchronous inter-service communication.
+What I did:
+●	Introduced asynchronous communication using Kafka, which decoupled services and reduced blocking.
+
+●	Implemented caching (using Spring Cache with Redis) for frequently accessed but rarely changing data like user profiles and exchange rates.
+
+●	Added connection pooling using HikariCP and fine-tuned thread pools and HTTP client timeouts.
+
+HikariCP: HikariCP (Hikari Connection Pool) is a high-performance JDBC connection pool library that is:
+Fast and lightweight, Built into Spring Boot
+
+It helps in:
+Reducing database connection latency
+Minimizing resource usage (threads, memory)
+Handling high concurrency more efficiently
+Automatically reusing connections rather than creating new ones
+spring.datasource.hikari.maximum-pool-size=20
+spring.datasource.hikari.minimum-idle=5
+spring.datasource.hikari.idle-timeout=30000
+spring.datasource.hikari.max-lifetime=1800000
+spring.datasource.hikari.connection-timeout=20000
+Connection pooling is a mechanism where a pool of pre-established database connections is maintained, and reused whenever a query is needed. This avoids the overhead of constantly opening and closing connections.
+Result:
+●	Improved response time of APIs by ~40%.
+
+●	Reduced service-to-service call failures under high load.
+
+b.	when generating large transactional reports, especially when filtering by multiple columns and dates.
+What I did:
+●	Analyzed slow queries using MySQL EXPLAIN PLAN and identified missing indexes.
+
+●	Added composite indexes on user_id, txn_date, and status fields.
+
+●	Refactored nested subqueries and used JOINs with WHERE filters early in the query.
+
+●	Replaced ORM (JPA) with native SQL for large data retrieval, combined with streaming pagination using LIMIT and OFFSET.
+
+Result:
+●	Reduced query execution time from 15 seconds to under 2 seconds for large datasets.
+
+●	Enabled dashboard reports to load without timeouts or manual DB interventions.
+2. How did you use sql query optimization to enhance server load times and data retrieval efficiency?
+●	User EXPLAIN to analyze slow queries
+●	Added proper Indexes
+●	Added composite indexes like (user_id, txn_date) and (status, created_at) to improve filtering speed.
+●	Avoided SELECT *
+●	Refactored Nested Subqueries & Used Joins Smartly
+●	Pagination for Large Result Sets
+●	Cached Frequently Accessed Data
+	A composite index (also called a multi-column index) is an index in a database that includes two or more columns.
+
+Instead of indexing just one column like:
+
+
+CREATE INDEX idx_user_id ON transactions(user_id);
+A composite index looks like:
+
+CREATE INDEX idx_user_date ON transactions(user_id, txn_date);
+This means the database creates an internal sorted structure (like a B-tree) that stores and orders data based on both user_id and txn_date.
+
+💡 Why Use Composite Indexes?
+Composite indexes are used to:
+
+Speed up queries that filter or sort by multiple columns
+
+Improve performance for WHERE clauses with multiple conditions
+
+✅ Example Scenario
+Without Composite Index:
+
+SELECT * FROM transactions WHERE user_id = 123 AND txn_date > '2024-01-01';
+If only a single-column index exists (on user_id), the DB:
+Filters by user_id
+Then scans records for txn_date condition (slower)
+
+With Composite Index on (user_id, txn_date):
+Databases can directly jump to the exact range of records matching both conditions.
+Much faster — especially on large tables!
+
+	CREATE INDEX idx_user_status_date
+ON transactions(user_id, status, created_at);
+
+3. Could you describe the process to follow when profiling java applications for cpu hotspots?
+
+VisualVM (free, easy to use)
+YourKit (commercial, powerful)
+JProfiler
+
+Open and run the java  and Open VisulalVM, here we can get the CPU times based on that we can
+
+For each top method:
+
+Check for:
+Unnecessary loops
+Expensive regex or string ops
+Inefficient SQL
+Redundant object creation
+
+Optimize and Re-profile
+Examples:
+Cache repeated calculations
+Optimize SQL queries or add indexes
+Avoid nested loops
+Use StringBuilder instead of + in loops
+Then re-run profiler and confirm improvement.
+
+		3. What is the @JsonView and when do we need to use it?
+
+@JsonView is an annotation provided by Jackson (the JSON library used by Spring Boot) to control what fields are included in JSON serialization or deserialization — depending on the "view" defined.
+
+Use @JsonView when:
+
+You want to return different subsets of fields from the same model.
+You need to expose limited data for public APIs but full data for internal or admin APIs.
+You want to hide sensitive fields (e.g., salary, passwords, internal IDs).
+
+Step 1: Define view classes - Nested classes are used for marker views
+
+public class Views {
+    public static class Public {}
+    public static class Internal extends Public {}
+}
+
+Step 2: Annotate your model
+
+import com.fasterxml.jackson.annotation.JsonView;
+
+public class Employee {
+    @JsonView(Views.Public.class)
+    private String name;
+
+    @JsonView(Views.Public.class)
+    private String department;
+
+    @JsonView(Views.Internal.class)
+    private double salary;
+
+    // getters and setters
+}
+
+Step 3: Use the view in controller
+
+@GetMapping("/public/employee")
+@JsonView(Views.Public.class)
+public Employee getPublicEmployee() {
+    return employeeService.getEmployee();
+}
+
+@GetMapping("/internal/employee")
+@JsonView(Views.Internal.class)
+public Employee getInternalEmployee() {
+    return employeeService.getEmployee();
+}
+
+Output:
+/public/employee returns:
+
+{
+  "name": "Praveen",
+  "department": "Engineering"
+}
+/internal/employee returns:
+{
+  "name": "Praveen",
+  "department": "Engineering",
+  "salary": 85000
+}
+	4. When to use UseEffect and UseLayoutEffect in reactjs?
+
+| Hook              | When it runs                            | Use case                                                                     |
+| ----------------- | ---------------------------------------- | ---------------------------------------------------------------------------- |
+| `useEffect`       | **After** DOM has painted    | Most common side effects (API calls, subscriptions)                          |
+| `useLayoutEffect` | **Before** the browser paints the screen | Synchronous DOM reads/writes that must happen **before** the screen is shown , might be used to update the sizes of the screen
+
+5. What is an event loop and how is it connected to stack and queue?
+
+Components:
+
+1. Call Stack (Execution Stack)
+This is where the JavaScript engine keeps track of the function calls that are currently being executed.
+It works like a stack data structure (Last-In, First-Out — LIFO).
+When a function is called, it's pushed onto the stack.
+When it returns, it pops off the stack.
+Only one function can execute at a time.
+
+2. Queue (Callback/Task Queue)
+This holds asynchronous tasks that are ready to be executed once the stack is empty.
+These tasks are pushed into the queue when, for example, timers expire, network requests complete, or events occur.
+The queue is FIFO (First-In, First-Out).
+
+3. Event Loop
+The event loop constantly monitors the call stack and the queue.
+If the stack is empty, it dequeues the first task in the queue and pushes it onto the call stack for execution.
+This mechanism allows asynchronous callbacks to run without blocking the main thread.
+6. Write singleton db configuration
+
+	Public class DatabaseConfig{
+		Private static final DatabaseConfig  instance;
+		public static DatabaseConfig getInstance() throws SQLException {
+        if (instance == null) {
+            synchronized (DatabaseConfig.class) {
+                if (instance == null) {
+                    instance = new DatabaseConfig();
+                }
+            }
+        }
+        return instance;
+    }
+}
+
+
+
+
+EPAM:
+1.	Combine 2 Sorted arrays without using Streams
+2.	Given a list of strings, write a Java program using Streams to filter and return only those elements that represent valid positive integers. Ignore strings that contain alphabets, special characters, or are negative/decimal numbers
+
+import java.util.*;
+import java.util.stream.*;
+
+class Main {
+    public static void main(String[] args) {
+        List<String> list = Arrays.asList("zz", "376", "302", "2xy"); // Expected [376, 302]
+        //List<String> list = Arrays.asList("as", "123", "32", "2as"); // Expected [123, 32]
+        List<Integer> result = filterValidIntegers(list);
+        System.out.println("Result is: " + result);
+    }
+
+    public static List<Integer> filterValidIntegers(List<String> strings) {
+        return strings.stream()
+                .filter(s -> s.matches("\\d+")) // Only digits
+//These are Predicate<T> @funactinalInterface which has test() method, return true or false
+                .map(Integer::parseInt)
+//Function interface which is used to transform the data s-> s.length() s->s%2=0, has apply() method
+                .collect(Collectors.toList());
+    }
+}
+//supplier which used to get() the value which is given, supplier_variable.get();
+
+class Solution {
+  public static void main(String[] args) {
+    List<Integer> list=Arrays.asList(10,15,8,49,null,98,132);
+
+    List<Integer> ls=list.stream()
+    .filter(Objects::nonNull)
+    .map(String::valueOf)
+    .map(Integer::parseInt)
+    .sorted(Collections.reverseOrder())
+    .toList();
+
+    System.out.println(ls);
+  }
+}
+
+
+Condition	Code / Regex	Matches	Doesn't Match
+Only digits	s.matches("\\d+")	"123"	"12a", "abc"
+Only letters (a–z, A–Z)	s.matches("[a-zA-Z]+")	"abc", "XYZ"	"123", "a1"
+Only lowercase letters	s.matches("[a-z]+")	"abc"	"ABC", "abc1"
+Only uppercase letters	s.matches("[A-Z]+")	"XYZ"	"XyZ"
+Alphanumeric only	s.matches("[a-zA-Z0-9]+")	"abc123"	"abc@", "123!"
+Contains at least one digit	s.matches(".*\\d.*")	"a1", "123"	"abc"
+Contains at least one letter	s.matches(".*[a-zA-Z].*")	"abc", "a1"	"123"
+Contains special characters	s.matches(".*[^a-zA-Z0-9].*")	"a#b", "123!"	"abc", "123"
+
+
+Condition	Code / Regex	Example Match
+Starts with "z" or "Z"	s.matches("[zZ].*")	"zz", "Zoo"
+Starts with any digit	s.matches("\\d.*")	"1abc"
+Ends with digit	s.matches(".*\\d")	"abc1"
+Starts with lowercase letter	s.matches("^[a-z].*")	"apple"
+Ends with uppercase letter	s.matches(".*[A-Z]$")	"hellO"
+
+In regular expressions:
+✅ ^ → Start of string
+✅ $ → End of string
+
+Condition	Code	Example Match
+Length exactly 3	s.length() == 3	"abc"
+Length >= 5	s.length() >= 5	"hello"
+Length between 2 and 4	s.length() >= 2 && s.length() <= 4	"ab", "xyz"
+
+
+Condition	Code
+Starts with "z" case-insensitive	s.matches("(?i)z.*")
+Equals "test" ignoring case	s.equalsIgnoreCase("test")
+Contains "abc" ignoring case	s.toLowerCase().contains("abc")
+
+
+Condition	Code
+Not a valid integer	!s.matches("\\d+")
+Not purely alphabetic	!s.matches("[a-zA-Z]+")
+Not starting with digit	!s.matches("\\d.*")
+
+
+
+Condition	Code
+Convert to int if valid, else ignore	s.matches("\\d+") && Integer.parseInt(s) > 100
+String contains "@"	s.contains("@")
+String contains substring "xyz"	s.contains("xyz")
+
+
+	L2:
+
+1.	You have two tables:
+user(id, name)
+role(id, name, user_id)
+Write a SQL query to find users without any role assignments.
+
+SELECT u.id, u.name
+FROM user u
+LEFT JOIN role r ON u.id = r.user_id
+WHERE r.user_id IS NULL;
+
+
+returns all rows from the left table (user), and matching rows from the right table (role).
+
+2.	What is normalization?
+
+Normalization is the process of organizing data in a database to:
+a.	Reduce redundancy
+b.	Improve data integrity
+
+It involves:
+
+Splitting large tables into smaller, related tables
+Defining relationships between them (usually using foreign keys)
+
+Benefits:
+
+Eliminates duplicate data
+Ensures efficient data storage
+Enhances consistency and accuracy
+
+Common forms:
+
+1NF (First Normal Form)
+2NF, 3NF, BCNF, etc., each with stricter rules
+
+3. Given a sorted array of distinct integers, write a function to return the index if the target is found. If not, return the index where it would be inserted in order.
+
+public class Solution {
+    public static int getInsertIndex(int[] nums, int target) {
+        int left = 0, right = nums.length - 1;
+
+        while (left <= right) {
+            int mid = left + (right - left) / 2;
+
+            if (nums[mid] == target)
+                return mid;
+            else if (nums[mid] < target)
+                left = mid + 1;
+            else
+                right = mid - 1;
+        }
+
+        // Target not found, return insertion index
+        return left;
+    }
+
+    public static void main(String[] args) {
+        int[] nums = {1, 3, 5, 6};
+        int target = 2;
+        System.out.println(getInsertIndex(nums, target));  // Output: 1
+    }
+}
+
+
+4. Contract between hashCode() and equals() in Java
+
+If two objects are equal according to equals(), they must return the same hashCode().
+
+If two objects have the same hashCode(), they may or may not be equal.
+
+hashCode() must be consistent – same value if the object doesn't change.
+
+Required for correct behavior in HashMap, HashSet, and other hash-based collections.
+
+5. Can a functional interface have only one abstract method?
+✅ Answer:
+Yes, a functional interface can have only one abstract method.
+
+It can have multiple default and static methods.
+
+Annotating with @FunctionalInterface is optional, but helps the compiler catch mistakes.
+
+6. Indexing in DB
+🔸 Why Index?
+Improves query performance by speeding up data retrieval.
+
+🔸 Types of Indexes:
+Primary Index: Automatically created on primary key.
+Unique Index: Ensures all values are unique.
+Composite Index: Index on multiple columns.
+Full-text Index: Used for search within text fields.
+
+7. To make arraylist as threadsafe
+Collections.synchronizedList(new ArrayList<>())
+
+| Concept           		| Example                                             		|
+| --------------------------------------| --------------------------------------------------- 		|
+| **Encapsulation** 		| Hiding class fields, exposing via getters/setters   	|
+| **Abstraction**   		| Used interfaces/abstract classes for service layers |
+| **Inheritance**   		| `User` extends `Person`, reuses fields/methods      |
+| **Polymorphism**  		| Method overriding: Different behavior in subclasses |
+
+
+9. Where You Used Optional in Java
+To avoid NullPointerException
+
+Example: In Service Layer when repository might return null
+
+Optional<User> user = userRepository.findById(id);
+user.ifPresent(u -> sendEmail(u.getEmail()));
+
+
+ACL:
+1.	@Primary
+Purpose: Marks a bean as the default bean to be autowired when multiple beans of the same type are present.
+
+@Bean
+@Primary
+public Vehicle car() {
+    return new Car();
+}
+
+@Bean
+public Vehicle bike() {
+    return new Bike();
+}
+
+@Autowired
+private Vehicle vehicle; // Injects the Car bean (because it's @Primary)
+When to use: When one bean should be considered the default and used in most places, unless explicitly overridden.
+
+2.	@Qualifier
+Purpose: Helps to specify exactly which bean to inject when multiple beans of the same type are available.
+
+Usage:
+
+@Bean
+public Vehicle car() {
+    return new Car();
+}
+
+@Bean
+public Vehicle bike() {
+    return new Bike();
+}
+
+@Autowired
+@Qualifier("bike")
+private Vehicle vehicle; // Injects the Bike bean
+When to use: When you want to override the default (@Primary) or avoid ambiguity by choosing a specific bean by name.
+3.	Java 8 (2014)
+
+Metaspace introduced, replacing PermGen.
+Allocates native (off-heap) memory for class metadata
+4.	Consumer<T>: An operation that accepts a value and performs an action, but returns nothing.Apply()
+
+5.	Supplier<T>: A function that supplies/generates a value with no input. get()
+6.	Two phase commit(2pc) - transaction annotation
+
+7.	How to handle composite key in JPA?
+8.	@PrePersist and @PostPersist?
+9.	How do you unit test static methods.
+10.	CloudWatch and cloud Trial
+11.	Find all the vowels using streams
+String str="Praveen Kumar B";
+    String v="aeiou";
+
+    Map<Character, Long> vowl=str.chars()
+                  .mapToObj(c->(char) c)
+                  .filter(c->v.indexOf(c)!=-1)
+                  .collect(Collectors.groupingBy(c->c, Collectors.counting()));
+
+    System.out.print(vowl);
+
+
+	StateStreet:
+1.	Get the second highest salaried employees
+
+ fl1 ln1 10,000 d1
+ fl2 ln2 11,000 d1
+ fl3 ln3 9,000 d1
+ fl4 ln4 11,000 d1
+ fl5 ln5 10,000 d1
+
+Select * from employees
+Where salary= ( Select distinct(salary) from
+employees
+	Order by salary desc
+	LIMIT 1 OFFSET 1);
+
